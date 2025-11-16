@@ -5,28 +5,35 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- Create the members table if it doesn't exist
 CREATE TABLE IF NOT EXISTS members (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid()
 );
 
--- Add columns to members table if they don't exist
+-- Add core columns to members table if they don't exist
+-- This ensures the script is non-destructive
 ALTER TABLE members ADD COLUMN IF NOT EXISTS name VARCHAR(255);
-ALTER TABLE members ADD COLUMN IF NOT EXISTS email VARCHAR(255) UNIQUE;
+ALTER TABLE members ADD COLUMN IF NOT EXISTS email VARCHAR(255);
 ALTER TABLE members ADD COLUMN IF NOT EXISTS phone VARCHAR(20);
 ALTER TABLE members ADD COLUMN IF NOT EXISTS address TEXT;
 ALTER TABLE members ADD COLUMN IF NOT EXISTS join_date DATE;
 ALTER TABLE members ADD COLUMN IF NOT EXISTS photo_url TEXT;
+ALTER TABLE members ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+
+-- Add KYC/nominee columns if they don't exist
 ALTER TABLE members ADD COLUMN IF NOT EXISTS dob DATE;
 ALTER TABLE members ADD COLUMN IF NOT EXISTS nominee_name VARCHAR(255);
 ALTER TABLE members ADD COLUMN IF NOT EXISTS nominee_relationship VARCHAR(100);
 ALTER TABLE members ADD COLUMN IF NOT EXISTS kyc_document_url TEXT;
 
--- Make the user_id column optional if it exists, to handle auto-added auth columns
+-- Make unexpectedly added auth columns optional to prevent insert failures
+-- This makes the script more resilient to external schema changes
 DO $$
 BEGIN
-   IF EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='members' AND column_name='user_id') THEN
-      ALTER TABLE members ALTER COLUMN user_id DROP NOT NULL;
-   END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='members' AND column_name='user_id') THEN
+        ALTER TABLE members ALTER COLUMN user_id DROP NOT NULL;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='members' AND column_name='room_id') THEN
+        ALTER TABLE members ALTER COLUMN room_id DROP NOT NULL;
+    END IF;
 END $$;
 
 
