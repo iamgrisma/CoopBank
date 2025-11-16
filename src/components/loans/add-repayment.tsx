@@ -155,7 +155,6 @@ interface AddRepaymentFormProps {
 export function AddRepaymentForm({ loanId, memberId, memberName, schedule, onRepaymentAdded, triggerButton }: AddRepaymentFormProps) {
   const [open, setOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [allocation, setAllocation] = React.useState<Allocation | null>(null);
   const { toast } = useToast();
 
   const overdueInstallments = React.useMemo(() => {
@@ -179,13 +178,11 @@ export function AddRepaymentForm({ loanId, memberId, memberName, schedule, onRep
   const watchAmount = form.watch("amount_paid");
   const watchWaivePenalty = form.watch("waive_penalty");
 
-  React.useEffect(() => {
+  const allocation = React.useMemo(() => {
     if (watchAmount > 0) {
-      const calculatedAllocation = allocatePayment(watchAmount, overdueInstallments, watchWaivePenalty);
-      setAllocation(calculatedAllocation);
-    } else {
-      setAllocation(null);
+      return allocatePayment(watchAmount, overdueInstallments, watchWaivePenalty);
     }
+    return null;
   }, [watchAmount, watchWaivePenalty, overdueInstallments]);
 
   React.useEffect(() => {

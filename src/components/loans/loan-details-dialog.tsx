@@ -56,7 +56,7 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
       .order('payment_date', { ascending: true });
 
     if (repaymentError) {
-      if (repaymentError.code === '42P01') { 
+       if (repaymentError.code === '42P01') { 
          toast({
             variant: "destructive",
             title: "Database Out of Date",
@@ -144,11 +144,68 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
           </DialogDescription>
         </DialogHeader>
         
-        <Tabs defaultValue="repayments">
+        <Tabs defaultValue="schedule">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="repayments">Repayment History</TabsTrigger>
             <TabsTrigger value="schedule">Amortization Schedule</TabsTrigger>
+            <TabsTrigger value="repayments">Repayment History</TabsTrigger>
           </TabsList>
+
+           <TabsContent value="schedule">
+             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 py-4 text-sm">
+                <div className="p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
+                    <h3 className="text-muted-foreground">Monthly EMI</h3>
+                    <p className="font-bold text-lg">{formatCurrency(calculateEMI(loan.amount, loan.interest_rate, loan.loan_term_months))}</p>
+                </div>
+                 <div className="p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
+                    <h3 className="text-muted-foreground">Total Due Today</h3>
+                    <p className="font-bold text-lg text-orange-600">{formatCurrency(totalDueToday)}</p>
+                </div>
+                <div className="p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
+                    <h3 className="text-muted-foreground">Total Interest Paid</h3>
+                    <p className="font-bold text-lg">{formatCurrency(totalInterestPaid)}</p>
+                </div>
+                 <div className="p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
+                    <h3 className="text-muted-foreground">Total Penalty Paid</h3>
+                    <p className="font-bold text-lg">{formatCurrency(totalPenaltyPaid)}</p>
+                </div>
+            </div>
+
+            <ScrollArea className="h-72">
+                <Table>
+                <TableHeader className="sticky top-0 bg-background">
+                    <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Principal</TableHead>
+                    <TableHead className="text-right">Interest</TableHead>
+                    <TableHead className="text-right">Penalty</TableHead>
+                    <TableHead className="text-right">Total Due</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                   {isLoading ? (
+                     <TableRow><TableCell colSpan={6} className="h-24 text-center">Loading schedule...</TableCell></TableRow>
+                  ) : schedule.length > 0 ? schedule.map((entry) => (
+                    <TableRow key={entry.month} className={entry.status === 'OVERDUE' ? 'bg-red-50 dark:bg-red-900/20' : ''}>
+                        <TableCell>{format(entry.paymentDate, "do MMM, yyyy")}</TableCell>
+                        <TableCell>{getStatusBadge(entry.status)}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(entry.principal)}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(entry.interest)}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(entry.penalty + entry.penalInterest)}</TableCell>
+                        <TableCell className="text-right font-semibold">{formatCurrency(entry.totalDue)}</TableCell>
+                    </TableRow>
+                    )) : (
+                     <TableRow>
+                        <TableCell colSpan={6} className="h-24 text-center">
+                            No schedule to display.
+                        </TableCell>
+                    </TableRow>
+                    )
+                }
+                </TableBody>
+                </Table>
+            </ScrollArea>
+          </TabsContent>
           
           <TabsContent value="repayments">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 py-4 text-sm">
@@ -211,62 +268,6 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
             </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="schedule">
-             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 py-4 text-sm">
-                <div className="p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
-                    <h3 className="text-muted-foreground">Monthly EMI</h3>
-                    <p className="font-bold text-lg">{formatCurrency(calculateEMI(loan.amount, loan.interest_rate, loan.loan_term_months))}</p>
-                </div>
-                 <div className="p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
-                    <h3 className="text-muted-foreground">Total Due Today</h3>
-                    <p className="font-bold text-lg text-orange-600">{formatCurrency(totalDueToday)}</p>
-                </div>
-                <div className="p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
-                    <h3 className="text-muted-foreground">Total Interest Paid</h3>
-                    <p className="font-bold text-lg">{formatCurrency(totalInterestPaid)}</p>
-                </div>
-                 <div className="p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
-                    <h3 className="text-muted-foreground">Total Penalty Paid</h3>
-                    <p className="font-bold text-lg">{formatCurrency(totalPenaltyPaid)}</p>
-                </div>
-            </div>
-
-            <ScrollArea className="h-72">
-                <Table>
-                <TableHeader className="sticky top-0 bg-background">
-                    <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Principal</TableHead>
-                    <TableHead className="text-right">Interest</TableHead>
-                    <TableHead className="text-right">Penalty</TableHead>
-                    <TableHead className="text-right">Total Due</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                   {isLoading ? (
-                     <TableRow><TableCell colSpan={6} className="h-24 text-center">Loading schedule...</TableCell></TableRow>
-                  ) : schedule.length > 0 ? schedule.map((entry) => (
-                    <TableRow key={entry.month} className={entry.status === 'OVERDUE' ? 'bg-red-50 dark:bg-red-900/20' : ''}>
-                        <TableCell>{format(entry.paymentDate, "do MMM, yyyy")}</TableCell>
-                        <TableCell>{getStatusBadge(entry.status)}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(entry.principal)}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(entry.interest)}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(entry.penalty + entry.penalInterest)}</TableCell>
-                        <TableCell className="text-right font-semibold">{formatCurrency(entry.totalDue)}</TableCell>
-                    </TableRow>
-                    )) : (
-                     <TableRow>
-                        <TableCell colSpan={6} className="h-24 text-center">
-                            No schedule to display.
-                        </TableCell>
-                    </TableRow>
-                    )
-                }
-                </TableBody>
-                </Table>
-            </ScrollArea>
-          </TabsContent>
         </Tabs>
       </DialogContent>
     </Dialog>
