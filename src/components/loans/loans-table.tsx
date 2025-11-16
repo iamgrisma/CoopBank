@@ -11,6 +11,10 @@ import {
 } from "@/components/ui/table"
 import { format } from "date-fns"
 import { Badge } from "../ui/badge";
+import { MoreHorizontal } from "lucide-react";
+import { Button } from "../ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
+import { LoanDetailsDialog } from "./loan-details-dialog";
 
 type Loan = {
   id: string;
@@ -66,12 +70,13 @@ export function LoansTable({ loans }: { loans: Loan[] }) {
             <TableHead>Interest</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Amount</TableHead>
+            <TableHead><span className="sr-only">Actions</span></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {loans.length === 0 ? (
             <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
+                <TableCell colSpan={8} className="h-24 text-center">
                     No loans found.
                 </TableCell>
             </TableRow>
@@ -99,6 +104,21 @@ export function LoansTable({ loans }: { loans: Loan[] }) {
                     </Badge>
                 </TableCell>
                  <TableCell className="text-right">{formatCurrency(loan.amount)}</TableCell>
+                 <TableCell className="text-right">
+                    <LoanDetailsDialog loan={loan}>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button aria-haspopup="true" size="icon" variant="ghost">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                    <span className="sr-only">Toggle menu</span>
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>View Schedule</DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </LoanDetailsDialog>
+                 </TableCell>
               </TableRow>
             ))
           )}

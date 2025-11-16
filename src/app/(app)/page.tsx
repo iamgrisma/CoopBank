@@ -3,6 +3,7 @@ import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { CashFlowChart } from "@/components/dashboard/cash-flow-chart";
 import { FinancialStatements } from "@/components/dashboard/financial-statements";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { UpcomingDues } from "@/components/dashboard/upcoming-dues";
 
 async function getDashboardData() {
   const supabase = createSupabaseServerClient();
@@ -29,6 +30,14 @@ async function getDashboardData() {
     .from('loans')
     .select('amount')
     .in('status', ['Active', 'Pending']);
+    
+  const { data: activeLoans, error: activeLoansError } = await supabase
+    .from('loans')
+    .select(`
+        *,
+        members ( id, name )
+    `)
+    .in('status', ['Active']);
 
 
   if (transactionsError) {
@@ -46,6 +55,9 @@ async function getDashboardData() {
    if (loansError) {
     console.error('Error fetching loans:', loansError);
   }
+  if (activeLoansError) {
+    console.error('Error fetching active loans:', activeLoansError);
+  }
 
   const totalSharesValue = shares ? shares.reduce((acc, share) => acc + (share.number_of_shares * share.face_value), 0) : 0;
   const totalSavingsValue = savings ? savings.reduce((acc, saving) => acc + saving.amount, 0) : 0;
@@ -60,13 +72,14 @@ async function getDashboardData() {
 
   return { 
     transactions: transactions || [],
-    overview
+    overview,
+    activeLoans: activeLoans || [],
   };
 }
 
 
 export default async function DashboardPage() {
-  const { transactions, overview } = await getDashboardData();
+  const { transactions, overview, activeLoans } = await getDashboardData();
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
@@ -76,6 +89,7 @@ export default async function DashboardPage() {
       <div className="grid gap-4 md:gap-8 lg:grid-cols-2 xl:grid-cols-3">
         <div className="grid auto-rows-max items-start gap-4 md:gap-8 lg:col-span-2">
             <CashFlowChart transactions={transactions} />
+            <UpcomingDues loans={activeLoans} />
         </div>
         <div className="grid gap-4 md:gap-8">
             <RecentTransactions transactions={transactions} />
