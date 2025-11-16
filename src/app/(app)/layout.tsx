@@ -10,6 +10,8 @@ import {
   Settings,
   UsersRound,
   Wallet,
+  ChevronDown,
+  CircleDot,
 } from "lucide-react";
 
 import { Header } from "@/components/header";
@@ -27,6 +29,10 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { UserNav } from "@/components/user-nav";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
+
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   // The authentication check has been bypassed for development.
@@ -51,6 +57,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
   */
+ const pathname = usePathname();
+ const isLoansActive = pathname.startsWith('/loans');
 
   return (
     <SidebarProvider>
@@ -102,13 +110,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Loans" isActive>
-                  <Link href="/loans">
-                    <HandCoins />
-                    <span>Loans</span>
-                  </Link>
-                </SidebarMenuButton>
+               <SidebarMenuItem>
+                <Collapsible>
+                  <CollapsibleTrigger asChild>
+                     <SidebarMenuButton tooltip="Loans" isActive={isLoansActive} className="justify-between w-full">
+                        <div className="flex items-center gap-2">
+                           <HandCoins />
+                           <span>Loans</span>
+                        </div>
+                        <ChevronDown className={cn("h-4 w-4 transition-transform", "group-data-[collapsible=icon]:hidden")} />
+                     </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="group-data-[collapsible=icon]:hidden pl-8 py-2 flex flex-col gap-2">
+                      <Link href="/loans" className={cn("text-sm hover:text-primary", pathname === "/loans" && "text-primary font-semibold")}>All Loans</Link>
+                      <Link href="/loans/schemes" className={cn("text-sm hover:text-primary", pathname === "/loans/schemes" && "text-primary font-semibold")}>Loan Schemes</Link>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroup>
