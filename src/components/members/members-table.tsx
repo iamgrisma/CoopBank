@@ -9,17 +9,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MoreHorizontal } from "lucide-react"
 import { format } from "date-fns"
+import { EditMember } from "./edit-member";
 
 type Member = {
   id: string;
@@ -28,6 +20,9 @@ type Member = {
   phone: string | null;
   address: string | null;
   join_date: string;
+  dob: string | null;
+  nominee_name: string | null;
+  nominee_relationship: string | null;
   photo_url: string | null;
 };
 
@@ -88,19 +83,7 @@ export function MembersTable({ members }: { members: Member[] }) {
                   {format(new Date(member.join_date), "yyyy-MM-dd")}
                 </TableCell>
                 <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button aria-haspopup="true" size="icon" variant="ghost">
-                        <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Toggle menu</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuItem>Edit</DropdownMenuItem>
-                      <DropdownMenuItem>Delete</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <EditMember member={member} />
                 </TableCell>
               </TableRow>
             ))

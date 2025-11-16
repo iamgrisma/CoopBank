@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { AtSign, Cake, MapPin, Phone } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { AddShare } from "@/components/members/add-share";
+import { AddShare } from "@/components/shares/add-share";
 
 async function getMember(id: string) {
   // The tables are defined in supabase/setup.sql
@@ -117,7 +117,10 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                                 <CardTitle>Share Holdings</CardTitle>
                             </div>
                             <div className="ml-auto flex items-center gap-2">
-                                <AddShare memberId={member.id} memberName={member.name || ''} />
+                                <AddShare
+                                  triggerButton={<Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Share</Button>}
+                                  defaultMember={{ id: member.id, name: member.name || '' }}
+                                />
                             </div>
                         </CardHeader>
                         <CardContent>
