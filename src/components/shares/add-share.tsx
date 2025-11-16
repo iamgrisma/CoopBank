@@ -221,10 +221,10 @@ export function AddShare({ members, defaultMember, triggerButton }: AddShareProp
                             <CommandGroup>
                               {members.map((member) => (
                                 <CommandItem
-                                  value={member.id}
+                                  value={member.name}
                                   key={member.id}
-                                  onSelect={(currentValue) => {
-                                    form.setValue("member_id", currentValue === field.value ? "" : currentValue)
+                                  onSelect={() => {
+                                    form.setValue("member_id", member.id)
                                   }}
                                 >
                                   <Check
