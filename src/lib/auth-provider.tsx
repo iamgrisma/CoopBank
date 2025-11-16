@@ -33,18 +33,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
         if (event === 'SIGNED_IN' && session?.user) {
-          if (session.user.email === 'iamgrisma@gmail.com') {
             setUser(session.user);
             router.push('/');
-          } else {
-            toast({
-              variant: "destructive",
-              title: "Unauthorized",
-              description: "You are not authorized to access this application.",
-            });
-            await supabase.auth.signOut();
-            setUser(null);
-          }
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
           router.push('/login');
@@ -57,12 +47,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-         if (session.user.email === 'iamgrisma@gmail.com') {
-            setUser(session.user);
-          } else {
-            await supabase.auth.signOut();
-            setUser(null);
-          }
+        setUser(session.user);
       }
       setLoading(false);
     };
