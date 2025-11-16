@@ -1,55 +1,59 @@
--- Seed data for the members table
-INSERT INTO public.members (id, name, email, phone, address, join_date, dob, nominee_name, nominee_relationship)
-VALUES 
-    ('11111111-1111-1111-1111-111111111111', 'Aarav Sharma', 'aarav.sharma@example.com', '9812345670', 'Kathmandu, Nepal', '2023-01-15', '1990-05-20', 'Priya Sharma', 'Spouse'),
-    ('22222222-2222-2222-2222-222222222222', 'Bina Pokharel', 'bina.pokharel@example.com', '9809876543', 'Pokhara, Nepal', '2023-02-20', '1985-11-30', 'Ramesh Pokharel', 'Brother'),
-    ('33333333-3333-3333-3333-333333333333', 'Chandan Kumar', 'chandan.kumar@example.com', '9841122334', 'Biratnagar, Nepal', '2023-03-10', '1995-02-10', 'Sunita Kumar', 'Mother');
+-- Sample Members
+INSERT INTO "public"."members" ("id", "name", "email", "phone", "address", "join_date", "dob", "photo_url", "nominee_name", "nominee_relationship") VALUES
+('1a2b3c4d-5e6f-7890-1234-567890abcdef', 'Grisma Pokharel', 'grisma@example.com', '9801111111', 'Kathmandu, Nepal', '2023-01-15', '1990-05-20', 'https://i.pravatar.cc/150?u=grisma', 'Aarav Pokharel', 'Son'),
+('b2c3d4e5-f6a7-8901-2345-67890abcdef1', 'Aarav Sharma', 'aarav@example.com', '9802222222', 'Pokhara, Nepal', '2023-02-20', '1985-11-10', 'https://i.pravatar.cc/150?u=aarav', 'Sunita Sharma', 'Wife'),
+('c3d4e5f6-a7b8-9012-3456-7890abcdef12', 'Sunita Karki', 'sunita@example.com', '9803333333', 'Lalitpur, Nepal', '2023-03-10', '1992-08-25', 'https://i.pravatar.cc/150?u=sunita', 'Rabin Karki', 'Husband');
 
--- Seed data for the loan_schemes table
-INSERT INTO public.loan_schemes (id, name, default_interest_rate, min_term_months, max_term_months, applicable_to, repayment_frequency)
-VALUES 
-    ('a1b2c3d4-e5f6-7890-1234-567890abcdef', 'Personal Loan', 14.50, 12, 60, '{members}', 'Monthly'),
-    ('b2c3d4e5-f6a7-8901-2345-67890abcdef0', 'Business Loan', 12.00, 24, 84, '{members}', 'Monthly'),
-    ('c3d4e5f6-a7b8-9012-3456-7890abcdef01', 'Education Loan', 9.50, 36, 120, '{members}', 'Monthly');
+-- Sample Loan Schemes
+INSERT INTO "public"."loan_schemes" ("id", "name", "default_interest_rate", "min_term_months", "max_term_months", "repayment_frequency", "applicable_to", "is_active") VALUES
+('a1b2c3d4-e5f6-7890-1234-567890abcdef', 'Personal Loan', 14.50, 12, 60, 'Monthly', '{members}', true),
+('d2c3e4f5-a6b7-8901-2345-67890abcdef1', 'Business Loan', 12.00, 24, 120, 'Monthly', '{members,outsiders}', true),
+('e3d4f5a6-b7c8-9012-3456-7890abcdef12', 'Emergency Loan', 18.00, 1, 12, 'One-Time', '{members}', true);
 
--- Seed data for the shares table
-INSERT INTO public.shares (member_id, certificate_number, number_of_shares, face_value, purchase_date)
-VALUES
-    ('11111111-1111-1111-1111-111111111111', 'SH-001', 100, 100.00, '2023-01-15'),
-    ('22222222-2222-2222-2222-222222222222', 'SH-002', 200, 100.00, '2023-02-20'),
-    ('11111111-1111-1111-1111-111111111111', 'SH-003', 50, 100.00, '2023-05-10');
-    
--- Seed data for the savings table
-INSERT INTO public.savings (member_id, amount, deposit_date, notes)
-VALUES
-    ('11111111-1111-1111-1111-111111111111', 5000.00, '2023-01-15', 'Initial deposit'),
-    ('22222222-2222-2222-2222-222222222222', 10000.00, '2023-02-20', 'Initial deposit'),
-    ('33333333-3333-3333-3333-333333333333', 2500.00, '2023-03-10', 'Initial deposit'),
-    ('11111111-1111-1111-1111-111111111111', 1200.00, '2023-04-05', 'Regular saving');
+-- Sample Shares for Grisma Pokharel
+INSERT INTO "public"."shares" ("member_id", "certificate_number", "number_of_shares", "face_value", "purchase_date") VALUES
+('1a2b3c4d-5e6f-7890-1234-567890abcdef', 'SH-001', 100, 100.00, '2023-01-15');
 
--- Seed data for the loans table
-INSERT INTO public.loans (member_id, loan_scheme_id, amount, interest_rate, loan_term_months, disbursement_date, status, description)
-VALUES
-    ('22222222-2222-2222-2222-222222222222', 'a1b2c3d4-e5f6-7890-1234-567890abcdef', 200000.00, 14.50, 36, '2023-06-01', 'Active', 'Personal loan for home renovation'),
-    ('33333333-3333-3333-3333-333333333333', 'b2c3d4e5-f6a7-8901-2345-67890abcdef0', 500000.00, 12.00, 60, '2023-07-15', 'Pending', 'Loan for starting a new business');
+-- Sample Shares for Aarav Sharma
+INSERT INTO "public"."shares" ("member_id", "certificate_number", "number_of_shares", "face_value", "purchase_date") VALUES
+('b2c3d4e5-f6a7-8901-2345-67890abcdef1', 'SH-002', 200, 100.00, '2023-02-22');
 
--- Seed data for the transactions table
--- Share purchases
-INSERT INTO public.transactions (member_id, member_name, type, amount, date, status, description)
-VALUES
-    ('11111111-1111-1111-1111-111111111111', 'Aarav Sharma', 'Share Purchase', 10000.00, '2023-01-15', 'Completed', 'Purchased 100 shares (Cert: SH-001)'),
-    ('22222222-2222-2222-2222-222222222222', 'Bina Pokharel', 'Share Purchase', 20000.00, '2023-02-20', 'Completed', 'Purchased 200 shares (Cert: SH-002)'),
-    ('11111111-1111-1111-1111-111111111111', 'Aarav Sharma', 'Share Purchase', 5000.00, '2023-05-10', 'Completed', 'Purchased 50 shares (Cert: SH-003)');
+-- Sample Shares for Sunita Karki
+INSERT INTO "public"."shares" ("member_id", "certificate_number", "number_of_shares", "face_value", "purchase_date") VALUES
+('c3d4e5f6-a7b8-9012-3456-7890abcdef12', 'SH-003', 150, 100.00, '2023-03-12');
 
--- Savings deposits
-INSERT INTO public.transactions (member_id, member_name, type, amount, date, status, description)
-VALUES
-    ('11111111-1111-1111-1111-111111111111', 'Aarav Sharma', 'Savings Deposit', 5000.00, '2023-01-15', 'Completed', 'Initial deposit'),
-    ('22222222-2222-2222-2222-222222222222', 'Bina Pokharel', 'Savings Deposit', 10000.00, '2023-02-20', 'Completed', 'Initial deposit'),
-    ('33333333-3333-3333-3333-333333333333', 'Chandan Kumar', 'Savings Deposit', 2500.00, '2023-03-10', 'Completed', 'Initial deposit'),
-    ('11111111-1111-1111-1111-111111111111', 'Aarav Sharma', 'Savings Deposit', 1200.00, '2023-04-05', 'Completed', 'Regular saving');
+-- Sample Savings for Grisma Pokharel
+INSERT INTO "public"."savings" ("member_id", "amount", "deposit_date", "notes") VALUES
+('1a2b3c4d-5e6f-7890-1234-567890abcdef', 5000.00, '2023-02-01', 'Monthly saving'),
+('1a2b3c4d-5e6f-7890-1234-567890abcdef', 5000.00, '2023-03-01', 'Monthly saving');
 
--- Loan disbursement
-INSERT INTO public.transactions (member_id, member_name, type, amount, date, status, description)
-VALUES
-    ('22222222-2222-2222-2222-222222222222', 'Bina Pokharel', 'Loan Disbursement', 200000.00, '2023-06-01', 'Completed', 'Loan disbursed. Personal loan for home renovation');
+-- Sample Savings for Aarav Sharma
+INSERT INTO "public"."savings" ("member_id", "amount", "deposit_date", "notes") VALUES
+('b2c3d4e5-f6a7-8901-2345-67890abcdef1', 10000.00, '2023-03-05', 'Initial deposit');
+
+-- Sample Loans for Grisma Pokharel
+INSERT INTO "public"."loans" ("member_id", "loan_scheme_id", "amount", "interest_rate", "loan_term_months", "disbursement_date", "status") VALUES
+('1a2b3c4d-5e6f-7890-1234-56T890abcdef', 'a1b2c3d4-e5f6-7890-1234-567890abcdef', 100000.00, 14.50, 36, '2023-04-01', 'Active');
+
+-- Sample Loans for Sunita Karki
+INSERT INTO "public"."loans" ("member_id", "loan_scheme_id", "amount", "interest_rate", "loan_term_months", "disbursement_date", "status") VALUES
+('c3d4e5f6-a7b8-9012-3456-7890abcdef12', 'd2c3e4f5-a6b7-8901-2345-67890abcdef1', 500000.00, 12.00, 60, '2023-05-10', 'Pending');
+
+
+-- Corresponding Transactions for the activities above
+
+-- Share Transactions
+INSERT INTO "public"."transactions" ("member_id", "member_name", "type", "amount", "date", "status", "description") VALUES
+('1a2b3c4d-5e6f-7890-1234-567890abcdef', 'Grisma Pokharel', 'Share Purchase', 10000.00, '2023-01-15', 'Completed', 'Purchased 100 shares (Cert: SH-001)'),
+('b2c3d4e5-f6a7-8901-2345-67890abcdef1', 'Aarav Sharma', 'Share Purchase', 20000.00, '2023-02-22', 'Completed', 'Purchased 200 shares (Cert: SH-002)'),
+('c3d4e5f6-a7b8-9012-3456-7890abcdef12', 'Sunita Karki', 'Share Purchase', 15000.00, '2023-03-12', 'Completed', 'Purchased 150 shares (Cert: SH-003)');
+
+-- Savings Transactions
+INSERT INTO "public"."transactions" ("member_id", "member_name", "type", "amount", "date", "status", "description") VALUES
+('1a2b3c4d-5e6f-7890-1234-567890abcdef', 'Grisma Pokharel', 'Savings Deposit', 5000.00, '2023-02-01', 'Completed', 'Monthly saving'),
+('1a2b3c4d-5e6f-7890-1234-567890abcdef', 'Grisma Pokharel', 'Savings Deposit', 5000.00, '2023-03-01', 'Completed', 'Monthly saving'),
+('b2c3d4e5-f6a7-8901-2345-67890abcdef1', 'Aarav Sharma', 'Savings Deposit', 10000.00, '2023-03-05', 'Completed', 'Initial deposit');
+
+-- Loan Transaction
+INSERT INTO "public"."transactions" ("member_id", "member_name", "type", "amount", "date", "status", "description") VALUES
+('1a2b3c4d-5e6f-7890-1234-567890abcdef', 'Grisma Pokharel', 'Loan Disbursement', 100000.00, '2023-04-01', 'Completed', 'Loan disbursed for Personal Loan');
