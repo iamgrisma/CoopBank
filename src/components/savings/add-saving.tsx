@@ -101,6 +101,7 @@ interface AddSavingProps {
 
 export function AddSaving({ members, defaultMember, triggerButton }: AddSavingProps) {
   const [open, setOpen] = React.useState(false);
+  const [popoverOpen, setPopoverOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { toast } = useToast();
   const router = useRouter();
@@ -186,7 +187,7 @@ export function AddSaving({ members, defaultMember, triggerButton }: AddSavingPr
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Member</FormLabel>
-                    <Popover>
+                    <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
@@ -217,7 +218,8 @@ export function AddSaving({ members, defaultMember, triggerButton }: AddSavingPr
                                   value={member.name}
                                   key={member.id}
                                   onSelect={() => {
-                                    form.setValue("member_id", member.id)
+                                    form.setValue("member_id", member.id);
+                                    setPopoverOpen(false);
                                   }}
                                 >
                                   <Check
