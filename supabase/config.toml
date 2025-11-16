@@ -8,7 +8,7 @@ max_rows = 1000
 [db]
 port = 54322
 shadow_port = 54320
-major_version = 17
+major_version = 15
 
 [db.pooler]
 enabled = false
@@ -22,7 +22,6 @@ port = 54323
 
 [realtime]
 enabled = true
-listen = ["public"]
 
 [auth]
 enabled = true
@@ -30,7 +29,6 @@ site_url = "http://localhost:3000"
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10
-enable_confirmations = true
 
 [auth.email.template.confirmation]
 
