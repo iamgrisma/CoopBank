@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { AtSign, Cake, MapPin, Phone } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { AddShare } from "@/components/members/add-share";
 
 async function getMember(id: string) {
   // The tables are defined in supabase/setup.sql
@@ -70,7 +71,7 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
           <Card>
             <CardHeader className="flex flex-col items-center text-center">
                 <Avatar className="h-24 w-24 mb-4">
-                    {member.photo_url && <AvatarImage src={member.photo_url} alt={member.name} />}
+                    {member.photo_url && <AvatarImage src={member.photo_url} alt={member.name || 'member photo'} />}
                     <AvatarFallback className="text-3xl">{getInitials(member.name)}</AvatarFallback>
                 </Avatar>
                 <CardTitle className="text-2xl">{member.name}</CardTitle>
@@ -111,8 +112,13 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                 </TabsList>
                 <TabsContent value="shares">
                     <Card>
-                        <CardHeader>
-                            <CardTitle>Share Holdings</CardTitle>
+                        <CardHeader className="flex flex-row items-center">
+                            <div className="grid gap-2">
+                                <CardTitle>Share Holdings</CardTitle>
+                            </div>
+                            <div className="ml-auto flex items-center gap-2">
+                                <AddShare memberId={member.id} memberName={member.name || ''} />
+                            </div>
                         </CardHeader>
                         <CardContent>
                             <div className="mb-4 grid grid-cols-2 gap-4">
