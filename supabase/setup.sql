@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS members (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Add columns to members table if they don't exist to ensure backwards compatibility
+-- Add columns to members table if they don't exist
 ALTER TABLE members ADD COLUMN IF NOT EXISTS name VARCHAR(255);
 ALTER TABLE members ADD COLUMN IF NOT EXISTS email VARCHAR(255) UNIQUE;
 ALTER TABLE members ADD COLUMN IF NOT EXISTS phone VARCHAR(20);
@@ -20,6 +20,14 @@ ALTER TABLE members ADD COLUMN IF NOT EXISTS dob DATE;
 ALTER TABLE members ADD COLUMN IF NOT EXISTS nominee_name VARCHAR(255);
 ALTER TABLE members ADD COLUMN IF NOT EXISTS nominee_relationship VARCHAR(100);
 ALTER TABLE members ADD COLUMN IF NOT EXISTS kyc_document_url TEXT;
+
+-- Make the user_id column optional if it exists, to handle auto-added auth columns
+DO $$
+BEGIN
+   IF EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='members' AND column_name='user_id') THEN
+      ALTER TABLE members ALTER COLUMN user_id DROP NOT NULL;
+   END IF;
+END $$;
 
 
 -- Create a custom type for transaction status if it doesn't exist
@@ -80,15 +88,10 @@ INSERT INTO transactions (id, member_id, member_name, type, amount, date, status
 ON CONFLICT (id) DO NOTHING;
 
 -- Seed data for shares
--- Correcting the id to be a string literal and adding ON CONFLICT
 INSERT INTO shares (id, member_id, certificate_number, number_of_shares, face_value, purchase_date) VALUES
-('a2c2d3e4-f5a6-8b9c-3d4e-5f6a7b8c9d01', '4b5c0c7a-9c3e-4d5a-8b1a-2e3f4c5d6e7f', 'SH-001', 50, 100.00, '2022-01-15'),
-('b2c2d3e4-f5a6-8b9c-3d4e-5f6a7b8c9d02', 'f4b3c2d1-e0a9-4b8c-8a7d-6f5e4d3c2b1a', 'SH-002', 100, 100.00, '2022-03-22'),
-('c2c2d3e4-f5a6-8b9c-3d4e-5f6a7b8c9d03', 'a1b2c3d4-e5f6-7890-1234-567890abcdef', 'SH-003', 75, 100.00, '2022-06-10'),
-('d2c2d3e4-f5a6-8b9c-3d4e-5f6a7b8c9d04', '123e4567-e89b-12d3-a456-426614174000', 'SH-004', 120, 100.00, '2023-02-28'),
-('e2c2d3e4-f5a6-8b9c-3d4e-5f6a7b8c9d05', '234e5678-f90c-23d4-b567-537725285111', 'SH-005', 80, 100.00, '2023-05-18')
+('a01', '4b5c0c7a-9c3e-4d5a-8b1a-2e3f4c5d6e7f', 'SH-001', 50, 100.00, '2022-01-15'),
+('a02', 'f4b3c2d1-e0a9-4b8c-8a7d-6f5e4d3c2b1a', 'SH-002', 100, 100.00, '2022-03-22'),
+('a03', 'a1b2c3d4-e5f6-7890-1234-567890abcdef', 'SH-003', 75, 100.00, '2022-06-10'),
+('a04', '123e4567-e89b-12d3-a456-426614174000', 'SH-004', 120, 100.00, '2023-02-28'),
+('a05', '234e5678-f90c-23d4-b567-537725285111', 'SH-005', 80, 100.00, '2023-05-18')
 ON CONFLICT (id) DO NOTHING;
-
--- Set NOT NULL constraints after seeding, in case the table was created without them
-ALTER TABLE members ALTER COLUMN name SET NOT NULL;
-ALTER TABLE members ALTER COLUMN join_date SET NOT NULL;
