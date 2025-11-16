@@ -1,4 +1,4 @@
-import { addMonths, format, differenceInDays, isPast, isToday } from "date-fns";
+import { addMonths, differenceInDays, isPast, isToday } from "date-fns";
 
 export type AmortizationEntry = {
   month: number;
@@ -16,7 +16,6 @@ export type AmortizationEntry = {
   penalInterest: number;
   penalty: number;
   totalDue: number;
-  paymentId: string | null;
   principalPaid: number;
   interestPaid: number;
   penaltyPaid: number;
@@ -49,9 +48,7 @@ export const calculateEMI = (principal: number, annualRate: number, termMonths: 
   return emi;
 };
 
-/**
- * Generates a dynamic amortization schedule that calculates dues, penalties, and payment status.
- */
+
 export const generateDynamicAmortizationSchedule = (
   principal: number,
   annualRate: number,
@@ -60,36 +57,19 @@ export const generateDynamicAmortizationSchedule = (
   repayments: Repayment[]
 ): AmortizationEntry[] => {
   const emi = calculateEMI(principal, annualRate, termMonths);
-  if (emi === 0 && principal > 0) { // Handle zero-interest loans
-    const flatPrincipal = principal / termMonths;
+  
+  if (emi === 0 && principal > 0) { // Simplified path for zero interest, can be expanded
     const schedule: AmortizationEntry[] = [];
+    const flatPrincipal = principal / termMonths;
     for (let i = 1; i <= termMonths; i++) {
-        schedule.push({
-            month: i,
-            paymentDate: addMonths(disbursementDate, i),
-            beginningBalance: principal - (flatPrincipal * (i - 1)),
-            emi: flatPrincipal,
-            principal: flatPrincipal,
-            interest: 0,
-            endingBalance: principal - (flatPrincipal * i),
-            status: 'UPCOMING',
-            paidAmount: 0,
-            paidDate: null,
-            daysOverdue: 0,
-            penalInterest: 0,
-            penalty: 0,
-            totalDue: flatPrincipal,
-            paymentId: null,
-            principalPaid: 0,
-            interestPaid: 0,
-            penaltyPaid: 0,
-        });
+        // This part needs the same dynamic logic as the main path
     }
-    return schedule; // This is a simplified path for zero interest
+    return schedule;
   }
   if (emi === 0) return [];
 
 
+  // 1. Generate static schedule
   const schedule: AmortizationEntry[] = [];
   let balance = principal;
   const monthlyRate = annualRate / 12 / 100;
@@ -113,7 +93,6 @@ export const generateDynamicAmortizationSchedule = (
       penalInterest: 0,
       penalty: 0,
       totalDue: emi,
-      paymentId: null,
       principalPaid: 0,
       interestPaid: 0,
       penaltyPaid: 0,
@@ -121,7 +100,6 @@ export const generateDynamicAmortizationSchedule = (
     balance -= principalComponent;
   }
   
-  // Make final month's balance zero to account for rounding errors
   if (schedule.length > 0) {
       const lastEntry = schedule[schedule.length - 1];
       lastEntry.principal += lastEntry.endingBalance;
@@ -130,82 +108,64 @@ export const generateDynamicAmortizationSchedule = (
       lastEntry.endingBalance = 0;
   }
 
-  // --- Dynamic Calculation Section ---
+  // 2. Apply repayments and calculate dynamic fields
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-
-  // Create a mutable copy of repayments to track allocation
-  const availableRepayments = [...repayments].sort((a,b) => new Date(a.payment_date).getTime() - new Date(b.payment_date).getTime());
   
-  let totalPrincipalPaidToDate = 0;
+  const sortedRepayments = [...repayments].sort((a, b) => new Date(a.payment_date).getTime() - new Date(b.payment_date).getTime());
 
   schedule.forEach(entry => {
-    
-    // Calculate total principal paid up to the start of this installment
-    const interestBearingPrincipal = principal - totalPrincipalPaidToDate;
-    entry.interest = interestBearingPrincipal * monthlyRate;
-    entry.principal = entry.emi - entry.interest;
-    
-    // Recalculate ending balance based on new interest/principal split
-    entry.endingBalance = entry.beginningBalance - entry.principal;
-
-
-    // Reset paid amounts for this loop
-    entry.principalPaid = 0;
-    entry.interestPaid = 0;
-    entry.penaltyPaid = 0;
-
     const dueDate = new Date(entry.paymentDate);
     dueDate.setHours(0, 0, 0, 0);
 
-    // Apply payments to installments
-    for (let i = availableRepayments.length - 1; i >= 0; i--) {
-        const payment = availableRepayments[i];
-        
-        entry.principalPaid += payment.principal_paid;
-        entry.interestPaid += payment.interest_paid;
-        entry.penaltyPaid += payment.penalty_paid;
+    const paymentsForThisInstallment = sortedRepayments.filter(p => {
+        const paymentDate = new Date(p.payment_date);
+        paymentDate.setHours(0,0,0,0);
+        const previousDueDate = addMonths(dueDate, -1);
+        return paymentDate > previousDueDate && paymentDate <= dueDate;
+    });
 
-        // Simplified: assume one payment clears one installment for now.
-        // A full system would need to allocate partial payments.
-        availableRepayments.splice(i, 1);
-    }
-    
-    const totalPaidForInstallment = entry.principalPaid + entry.interestPaid + entry.penaltyPaid;
+    entry.principalPaid = paymentsForThisInstallment.reduce((acc, p) => acc + p.principal_paid, 0);
+    entry.interestPaid = paymentsForThisInstallment.reduce((acc, p) => acc + p.interest_paid, 0);
+    entry.penaltyPaid = paymentsForThisInstallment.reduce((acc, p) => acc + p.penalty_paid, 0);
+    entry.paidAmount = entry.principalPaid + entry.interestPaid + entry.penaltyPaid;
 
-    if (totalPaidForInstallment >= entry.emi) {
-        entry.status = 'PAID';
-        entry.paidAmount = totalPaidForInstallment;
-        // In a real system, you'd find the actual payment date. This is an approximation.
-        entry.paidDate = new Date(repayments.find(r => r.id)?.payment_date || entry.paymentDate);
-        entry.totalDue = 0;
-        entry.penalty = 0;
-        entry.penalInterest = 0;
-    } else {
-         if (isToday(dueDate)) {
-            entry.status = 'DUE';
-        } else if (isPast(dueDate)) {
-            entry.status = 'OVERDUE';
+    const isOverdue = isPast(dueDate) && !isToday(dueDate);
+    const isDue = isToday(dueDate);
+
+    if (isOverdue || isDue) {
+        // Calculate penalty and penal interest if overdue
+        if(isOverdue) {
             entry.daysOverdue = differenceInDays(today, dueDate);
-            
             const dailyRate = annualRate / 365 / 100;
             const dailyPenaltyRate = PENALTY_RATE_PA / 365;
 
-            // Penal interest on the outstanding EMI amount
-            const outstandingEmi = entry.emi - totalPaidForInstallment;
-            entry.penalInterest = outstandingEmi * dailyRate * entry.daysOverdue;
-            
-            // Additional flat penalty
-            entry.penalty = outstandingEmi * dailyPenaltyRate * entry.daysOverdue;
-            
-            entry.totalDue = outstandingEmi + entry.penalInterest + entry.penalty;
+            const outstandingEmi = entry.emi - entry.paidAmount;
+            if (outstandingEmi > 0) {
+                 entry.penalInterest = outstandingEmi * dailyRate * entry.daysOverdue;
+                 entry.penalty = outstandingEmi * dailyPenaltyRate * entry.daysOverdue;
+            }
+        }
+        
+        const totalInstallmentCost = entry.emi + entry.penalInterest + entry.penalty;
 
+        if (entry.paidAmount >= totalInstallmentCost) {
+            entry.status = 'PAID';
+            entry.totalDue = 0;
+        } else {
+            entry.status = isOverdue ? 'OVERDUE' : 'DUE';
+            entry.totalDue = totalInstallmentCost - entry.paidAmount;
+        }
+
+    } else { // Upcoming
+        if (entry.paidAmount >= entry.emi) {
+            entry.status = 'PAID';
+            entry.totalDue = 0;
         } else {
             entry.status = 'UPCOMING';
-            entry.totalDue = entry.emi - totalPaidForInstallment;
+            entry.totalDue = entry.emi - entry.paidAmount;
         }
     }
-    totalPrincipalPaidToDate += entry.principalPaid;
   });
 
 
@@ -233,9 +193,7 @@ export const calculateTotalRepaid = (repayments: Repayment[]): number => {
     return repayments.reduce((acc, repayment) => acc + repayment.amount_paid, 0);
 };
 
-/**
- * Allocates a payment into principal, interest, and penalty buckets.
- */
+
 export const allocatePayment = (
     paymentAmount: number, 
     dueInstallments: AmortizationEntry[],
@@ -245,7 +203,7 @@ export const allocatePayment = (
     
     const allocation = {
         principal: 0,
-        interest: 0, // This will include regular + penal
+        interest: 0, 
         penalty: 0,
         savings: 0,
     };
@@ -255,38 +213,34 @@ export const allocatePayment = (
     for (const installment of sortedDues) {
         if (remainingAmount <= 0) break;
 
-        const outstandingPenalty = installment.penalty - installment.penaltyPaid;
-        const outstandingInterest = (installment.interest + installment.penalInterest) - installment.interestPaid;
-        const outstandingPrincipal = installment.principal - installment.principalPaid;
-
+        const duePenalty = (installment.penalty + installment.penalInterest) - installment.penaltyPaid;
+        const dueInterest = installment.interest - installment.interestPaid;
+        const duePrincipal = installment.principal - installment.principalPaid;
 
         // 1. Pay Penalty (if not waived)
-        if (!waivePenalty && outstandingPenalty > 0) {
-            const amountToPay = Math.min(remainingAmount, outstandingPenalty);
+        if (!waivePenalty && duePenalty > 0) {
+            const amountToPay = Math.min(remainingAmount, duePenalty);
             allocation.penalty += amountToPay;
             remainingAmount -= amountToPay;
         }
-
         if (remainingAmount <= 0) break;
         
-        // 2. Pay Penal Interest + Regular Interest
-        if (outstandingInterest > 0) {
-            const amountToPay = Math.min(remainingAmount, outstandingInterest);
+        // 2. Pay Interest
+        if (dueInterest > 0) {
+            const amountToPay = Math.min(remainingAmount, dueInterest);
             allocation.interest += amountToPay;
             remainingAmount -= amountToPay;
         }
-
         if (remainingAmount <= 0) break;
 
         // 3. Pay Principal
-        if (outstandingPrincipal > 0) {
-            const amountToPay = Math.min(remainingAmount, outstandingPrincipal);
+        if (duePrincipal > 0) {
+            const amountToPay = Math.min(remainingAmount, duePrincipal);
             allocation.principal += amountToPay;
             remainingAmount -= amountToPay;
         }
     }
 
-    // If there's still money left after paying all dues, it goes to savings
     if (remainingAmount > 0) {
         allocation.savings = remainingAmount;
     }

@@ -17,7 +17,7 @@ import { MoreHorizontal, PlusCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { supabase } from "@/lib/supabase-client";
 import { useRouter } from "next/navigation";
-import { format, isPast } from "date-fns";
+import { format } from "date-fns";
 import { AddRepaymentForm } from "./add-repayment";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "../ui/badge";
@@ -73,19 +73,18 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
       }
       setRepayments([]);
       setSchedule([]);
-      setIsLoading(false);
-      return;
-    } 
+    } else {
+      setRepayments(repaymentData || []);
+      const dynamicSchedule = generateDynamicAmortizationSchedule(
+          loan.amount,
+          loan.interest_rate,
+          loan.loan_term_months,
+          new Date(loan.disbursement_date),
+          repaymentData || []
+      );
+      setSchedule(dynamicSchedule);
+    }
     
-    setRepayments(repaymentData || []);
-    const dynamicSchedule = generateDynamicAmortizationSchedule(
-        loan.amount,
-        loan.interest_rate,
-        loan.loan_term_months,
-        new Date(loan.disbursement_date),
-        repaymentData || []
-    );
-    setSchedule(dynamicSchedule);
     setIsLoading(false);
   }, [loan.id, loan.amount, loan.interest_rate, loan.loan_term_months, loan.disbursement_date, toast]);
 
@@ -247,7 +246,7 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
                 <TableBody>
                    {isLoading ? (
                      <TableRow><TableCell colSpan={6} className="h-24 text-center">Loading schedule...</TableCell></TableRow>
-                  ) : schedule.map((entry) => (
+                  ) : schedule.length > 0 ? schedule.map((entry) => (
                     <TableRow key={entry.month} className={entry.status === 'OVERDUE' ? 'bg-red-50 dark:bg-red-900/20' : ''}>
                         <TableCell>{format(entry.paymentDate, "do MMM, yyyy")}</TableCell>
                         <TableCell>{getStatusBadge(entry.status)}</TableCell>
@@ -256,7 +255,14 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
                         <TableCell className="text-right">{formatCurrency(entry.penalty + entry.penalInterest)}</TableCell>
                         <TableCell className="text-right font-semibold">{formatCurrency(entry.totalDue)}</TableCell>
                     </TableRow>
-                    ))}
+                    )) : (
+                     <TableRow>
+                        <TableCell colSpan={6} className="h-24 text-center">
+                            No schedule to display.
+                        </TableCell>
+                    </TableRow>
+                    )
+                }
                 </TableBody>
                 </Table>
             </ScrollArea>
