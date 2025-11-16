@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import {
   Table,
   TableBody,
@@ -46,7 +47,11 @@ export function MembersTable({ members }: { members: Member[] }) {
         <TableBody>
           {members.map((member) => (
             <TableRow key={member.id}>
-              <TableCell className="font-medium">{member.name}</TableCell>
+              <TableCell className="font-medium">
+                <Link href={`/members/${member.id}`} className="hover:underline text-primary">
+                  {member.name}
+                </Link>
+              </TableCell>
               <TableCell>
                 <div className="flex flex-col">
                   <span>{member.email}</span>
