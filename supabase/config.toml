@@ -37,4 +37,3 @@ enable_confirmations = true
 
 [analytics]
 enabled = false
-backend = "https://api.supabase.io"
