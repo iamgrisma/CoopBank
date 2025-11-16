@@ -1,7 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   BookOpenCheck,
@@ -29,9 +27,12 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { UserNav } from "@/components/user-nav";
-import { useAuth } from "@/lib/auth-provider";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+  // The authentication check has been bypassed for development.
+  // To re-enable, uncomment the following section and the related imports.
+
+  /*
   const { user, loading } = useAuth();
   const router = useRouter();
 
@@ -49,6 +50,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
+  */
 
   return (
     <SidebarProvider>
