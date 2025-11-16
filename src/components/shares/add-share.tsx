@@ -88,6 +88,10 @@ async function addShareToDb(share: Omit<ShareFormValues, 'purchase_date'> & { pu
     });
 
   if (transactionError) {
+    // If the transaction fails, we should ideally roll back the share purchase.
+    // For simplicity here, we'll just log an error.
+    // A more robust solution would use a database transaction.
+    console.error(`Share added, but failed to create transaction: ${transactionError.message}`);
     throw new Error(`Share added, but failed to create transaction: ${transactionError.message}`);
   }
 
@@ -116,6 +120,19 @@ export function AddShare({ members, defaultMember, triggerButton }: AddShareProp
       purchase_date: new Date(),
     },
   });
+
+  // Reset form when the dialog opens, especially for default member
+  React.useEffect(() => {
+    if (open) {
+      form.reset({
+        member_id: defaultMember?.id || "",
+        certificate_number: "",
+        number_of_shares: 1,
+        face_value: 100,
+        purchase_date: new Date(),
+      });
+    }
+  }, [open, defaultMember, form]);
 
   const onSubmit = async (values: ShareFormValues) => {
     setIsSubmitting(true);
@@ -156,7 +173,7 @@ export function AddShare({ members, defaultMember, triggerButton }: AddShareProp
         <DialogHeader>
           <DialogTitle>Add Share Purchase</DialogTitle>
           <DialogDescription>
-            Record a new share purchase.
+            Record a new share purchase for a member.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
