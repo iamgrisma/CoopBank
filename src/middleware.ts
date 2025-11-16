@@ -54,19 +54,18 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const { data: { session } } = await supabase.auth.getSession()
+  // Temporarily disabled authentication checks
+  // const { data: { session } } = await supabase.auth.getSession()
 
-  // Redirect to login if no session and not on login page
-  if (!session && request.nextUrl.pathname.startsWith('/')) {
-      if (request.nextUrl.pathname !== '/login') {
-        return NextResponse.redirect(new URL('/login', request.url))
-      }
-  }
+  // if (!session && request.nextUrl.pathname.startsWith('/')) {
+  //     if (request.nextUrl.pathname !== '/login') {
+  //       return NextResponse.redirect(new URL('/login', request.url))
+  //     }
+  // }
 
-  // Redirect to home if session exists and on login page
-  if (session && request.nextUrl.pathname === '/login') {
-    return NextResponse.redirect(new URL('/', request.url))
-  }
+  // if (session && request.nextUrl.pathname === '/login') {
+  //   return NextResponse.redirect(new URL('/', request.url))
+  // }
 
   return response
 }

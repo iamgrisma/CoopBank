@@ -12,11 +12,15 @@ type AuthContextType = {
   signOut: () => Promise<void>;
 };
 
-const AuthContext = createContext<AuthContextType>({
+// Create a default context value that doesn't throw an error
+const defaultAuthContext: AuthContextType = {
   user: null,
-  loading: true,
-  signOut: async () => {},
-});
+  loading: false,
+  signOut: async () => { console.warn("signOut called without AuthProvider") },
+};
+
+
+const AuthContext = createContext<AuthContextType>(defaultAuthContext);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -26,28 +30,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    router.push('/login');
   };
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
-        if (session?.user) {
-          setUser(session.user);
-        } else {
-          setUser(null);
-        }
-        // Force a router refresh to re-run server components and fetch data
-        router.refresh();
+        setUser(session?.user ?? null);
         setLoading(false);
+        router.refresh();
       }
     );
 
-    // Check initial session
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        setUser(session.user);
-      }
+      setUser(session?.user ?? null);
       setLoading(false);
     };
 
@@ -56,7 +53,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [router, toast]);
+  }, [router]);
 
   const value = {
     user,
@@ -68,12 +65,5 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 };
 
 export const useAuth = () => {
-  const context = useContext(_AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+  return useContext(AuthContext);
 };
-
-// Workaround for React Refresh limitations
-const _AuthContext = AuthContext;

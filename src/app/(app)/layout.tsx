@@ -31,31 +31,10 @@ import { UserNav } from "@/components/user-nav";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/lib/auth-provider";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    }
-  }, [user, loading, router]);
-
   const pathname = usePathname();
   const isLoansActive = pathname.startsWith('/loans');
-  
-  if (loading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center">
-        Loading...
-      </div>
-    );
-  }
 
   return (
     <SidebarProvider>
