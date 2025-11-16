@@ -95,7 +95,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Savings" isActive>
+                <SidebarMenuButton asChild tooltip="Savings">
                   <Link href="/savings">
                     <Wallet />
                     <span>Savings</span>
@@ -103,8 +103,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Loans">
-                  <Link href="#">
+                <SidebarMenuButton asChild tooltip="Loans" isActive>
+                  <Link href="/loans">
                     <HandCoins />
                     <span>Loans</span>
                   </Link>

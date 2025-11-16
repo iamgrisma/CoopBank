@@ -10,6 +10,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { AddShare } from "@/components/shares/add-share";
 import { Button } from "@/components/ui/button";
 import { AddSaving } from "@/components/savings/add-saving";
+import { AddLoan } from "@/components/loans/add-loan";
+import { Badge } from "@/components/ui/badge";
 
 async function getMember(id: string) {
   // The tables are defined in supabase/setup.sql
@@ -55,6 +57,36 @@ async function getSavings(memberId: string) {
     return savings;
 }
 
+async function getLoans(memberId: string) {
+  const { data, error } = await supabase
+    .from('loans')
+    .select(`
+      *,
+      loan_schemes (name)
+    `)
+    .eq('member_id', memberId)
+    .order('disbursement_date', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching loans:', error);
+    return [];
+  }
+  return data;
+}
+
+async function getLoanSchemes() {
+    const { data, error } = await supabase
+        .from('loan_schemes')
+        .select('*')
+        .order('name', { ascending: true });
+    
+    if (error) {
+        console.error('Error fetching loan schemes:', error);
+        return [];
+    }
+    return data;
+}
+
 
 const getInitials = (name: string | undefined) => {
   if (!name) return "U";
@@ -77,11 +109,15 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
   const member = await getMember(params.id);
   const shares = await getShares(params.id);
   const savings = await getSavings(params.id);
+  const loans = await getLoans(params.id);
+  const loanSchemes = await getLoanSchemes();
 
   const totalSharesValue = shares.reduce((acc, share) => acc + (share.number_of_shares * share.face_value), 0);
   const totalSharesCount = shares.reduce((acc, share) => acc + share.number_of_shares, 0);
 
   const totalSavings = savings.reduce((acc, saving) => acc + saving.amount, 0);
+  
+  const totalLoanAmount = loans.reduce((acc, loan) => acc + loan.amount, 0);
 
 
   return (
@@ -222,11 +258,47 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                 </TabsContent>
                 <TabsContent value="loans">
                     <Card>
-                        <CardHeader>
-                            <CardTitle>Loan Accounts</CardTitle>
+                        <CardHeader className="flex flex-row items-center">
+                            <div className="grid gap-2">
+                                <CardTitle>Loan Accounts</CardTitle>
+                            </div>
+                            <div className="ml-auto flex items-center gap-2">
+                                 <AddLoan
+                                    loanSchemes={loanSchemes}
+                                    defaultMember={{ id: member.id, name: member.name || '' }}
+                                    triggerButton={<Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Loan</Button>}
+                                />
+                            </div>
                         </CardHeader>
                         <CardContent>
-                            <p>Loan account details will appear here once Module 4 is implemented.</p>
+                            <div className="mb-4 grid grid-cols-1 gap-4">
+                                <div className="p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
+                                    <h3 className="text-sm font-medium text-muted-foreground">Total Loan Amount</h3>
+                                    <p className="text-2xl font-bold">{formatCurrency(totalLoanAmount)}</p>
+                                </div>
+                            </div>
+                           <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Scheme</TableHead>
+                                        <TableHead>Disbursed</TableHead>
+                                        <TableHead>Term</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead className="text-right">Amount</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {loans.map(loan => (
+                                        <TableRow key={loan.id}>
+                                            <TableCell>{loan.loan_schemes?.name}</TableCell>
+                                            <TableCell>{format(new Date(loan.disbursement_date), "do MMM, yyyy")}</TableCell>
+                                            <TableCell>{loan.loan_term_months} months</TableCell>
+                                            <TableCell><Badge variant="outline">{loan.status}</Badge></TableCell>
+                                            <TableCell className="text-right">{formatCurrency(loan.amount)}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
                         </CardContent>
                     </Card>
                 </TabsContent>
