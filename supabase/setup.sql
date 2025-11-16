@@ -6,18 +6,21 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 -- Create the members table if it doesn't exist
 CREATE TABLE IF NOT EXISTS members (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE,
     phone VARCHAR(20),
     address TEXT,
     join_date DATE NOT NULL,
     photo_url TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    dob DATE,
-    nominee_name VARCHAR(255),
-    nominee_relationship VARCHAR(100),
-    kyc_document_url TEXT
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Add columns to members table if they don't exist
+-- This ensures that older versions of the table get updated correctly
+ALTER TABLE members ADD COLUMN IF NOT EXISTS name VARCHAR(255) NOT NULL DEFAULT 'Default Name';
+ALTER TABLE members ADD COLUMN IF NOT EXISTS dob DATE;
+ALTER TABLE members ADD COLUMN IF NOT EXISTS nominee_name VARCHAR(255);
+ALTER TABLE members ADD COLUMN IF NOT EXISTS nominee_relationship VARCHAR(100);
+ALTER TABLE members ADD COLUMN IF NOT EXISTS kyc_document_url TEXT;
 
 -- Create a custom type for transaction status if it doesn't exist
 DO $$
@@ -78,9 +81,9 @@ ON CONFLICT (id) DO NOTHING;
 
 -- Seed data for shares
 INSERT INTO shares (id, member_id, certificate_number, number_of_shares, face_value, purchase_date) VALUES
-('a0e9f0a1-b2c3-4d5e-9f0a-1b2c3d4e5f6a', '4b5c0c7a-9c3e-4d5a-8b1a-2e3f4c5d6e7f', 'SH-001', 50, 100.00, '2022-01-15'),
-('b1c2d3e4-f5a6-8b9c-3d4e-5f6a7b8c9d0e', 'f4b3c2d1-e0a9-4b8c-8a7d-6f5e4d3c2b1a', 'SH-002', 100, 100.00, '2022-03-22'),
-('c2d3e4f5-a6b7-9c0d-4e5f-6a7b8c9d0e1f', 'a1b2c3d4-e5f6-7890-1234-567890abcdef', 'SH-003', 75, 100.00, '2022-06-10'),
-('d3e4f5a6-b7c8-0d1e-5f6a-7b8c9d0e1f2a', '123e4567-e89b-12d3-a456-426614174000', 'SH-004', 120, 100.00, '2023-02-28'),
-('e4f5a6b7-c8d9-1e2f-6a7b-8c9d0e1f2a3b', '234e5678-f90c-23d4-b567-537725285111', 'SH-005', 80, 100.00, '2023-05-18')
+('a01', '4b5c0c7a-9c3e-4d5a-8b1a-2e3f4c5d6e7f', 'SH-001', 50, 100.00, '2022-01-15'),
+('a02', 'f4b3c2d1-e0a9-4b8c-8a7d-6f5e4d3c2b1a', 'SH-002', 100, 100.00, '2022-03-22'),
+('a03', 'a1b2c3d4-e5f6-7890-1234-567890abcdef', 'SH-003', 75, 100.00, '2022-06-10'),
+('a04', '123e4567-e89b-12d3-a456-426614174000', 'SH-004', 120, 100.00, '2023-02-28'),
+('a05', '234e5678-f90c-23d4-b567-537725285111', 'SH-005', 80, 100.00, '2023-05-18')
 ON CONFLICT (id) DO NOTHING;
