@@ -7,12 +7,13 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { calculateEMI, generateAmortizationSchedule, formatCurrency } from "@/lib/loan-utils";
-import { Badge } from "../ui/badge";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
+import { Button } from "../ui/button";
+import { MoreHorizontal } from "lucide-react";
 
 type Loan = {
   id: string;
@@ -25,18 +26,32 @@ type Loan = {
 
 interface LoanDetailsDialogProps {
   loan: Loan;
-  children: React.ReactNode;
+  trigger?: React.ReactNode;
 }
 
-export function LoanDetailsDialog({ loan, children }: LoanDetailsDialogProps) {
+export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
   const [open, setOpen] = React.useState(false);
 
   const emi = calculateEMI(loan.amount, loan.interest_rate, loan.loan_term_months);
   const schedule = generateAmortizationSchedule(loan.amount, loan.interest_rate, loan.loan_term_months, new Date(loan.disbursement_date));
 
+  const defaultTrigger = (
+     <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+            <Button aria-haspopup="true" size="icon" variant="ghost">
+                <MoreHorizontal className="h-4 w-4" />
+                <span className="sr-only">Toggle menu</span>
+            </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => setOpen(true)}>View Schedule</DropdownMenuItem>
+        </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild onClick={() => setOpen(true)}>{children}</DialogTrigger>
+      {trigger ? <div onClick={() => setOpen(true)}>{trigger}</div> : defaultTrigger}
       <DialogContent className="sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>Loan Repayment Schedule</DialogTitle>

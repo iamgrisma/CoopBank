@@ -11,9 +11,6 @@ import {
 } from "@/components/ui/table"
 import { format } from "date-fns"
 import { Badge } from "../ui/badge";
-import { MoreHorizontal } from "lucide-react";
-import { Button } from "../ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { LoanDetailsDialog } from "./loan-details-dialog";
 
 type Loan = {
@@ -105,19 +102,7 @@ export function LoansTable({ loans }: { loans: Loan[] }) {
                 </TableCell>
                  <TableCell className="text-right">{formatCurrency(loan.amount)}</TableCell>
                  <TableCell className="text-right">
-                    <LoanDetailsDialog loan={loan}>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button aria-haspopup="true" size="icon" variant="ghost">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                    <span className="sr-only">Toggle menu</span>
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>View Schedule</DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </LoanDetailsDialog>
+                    <LoanDetailsDialog loan={loan} />
                  </TableCell>
               </TableRow>
             ))

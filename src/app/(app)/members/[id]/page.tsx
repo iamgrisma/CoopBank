@@ -12,7 +12,6 @@ import { AddSaving } from "@/components/savings/add-saving";
 import { AddLoan } from "@/components/loans/add-loan";
 import { Badge } from "@/components/ui/badge";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { LoanDetailsDialog } from "@/components/loans/loan-details-dialog";
 
 async function getMember(id: string) {
@@ -304,19 +303,7 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                                             <TableCell><Badge variant="outline">{loan.status}</Badge></TableCell>
                                             <TableCell className="text-right">{formatCurrency(loan.amount)}</TableCell>
                                             <TableCell className="text-right">
-                                                <LoanDetailsDialog loan={loan}>
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button aria-haspopup="true" size="icon" variant="ghost">
-                                                                <MoreHorizontal className="h-4 w-4" />
-                                                                <span className="sr-only">Toggle menu</span>
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>View Schedule</DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </LoanDetailsDialog>
+                                                <LoanDetailsDialog loan={loan} />
                                             </TableCell>
                                         </TableRow>
                                     ))}
