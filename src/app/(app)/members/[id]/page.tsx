@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase-client";
 import { notFound } from "next/navigation";
+import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,6 +8,7 @@ import { format } from "date-fns";
 import { AtSign, Cake, MapPin, Phone } from "lucide-react";
 
 async function getMember(id: string) {
+  // The tables are defined in supabase/setup.sql
   const { data: member, error } = await supabase
     .from("members")
     .select("*")
@@ -39,7 +41,7 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
           <Card>
             <CardHeader className="flex flex-col items-center text-center">
                 <Avatar className="h-24 w-24 mb-4">
-                    {/* Placeholder for member photo */}
+                    {member.photo_url && <AvatarImage src={member.photo_url} alt={member.name} />}
                     <AvatarFallback className="text-3xl">{getInitials(member.name)}</AvatarFallback>
                 </Avatar>
                 <CardTitle className="text-2xl">{member.name}</CardTitle>
@@ -60,6 +62,10 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                     <div className="flex items-center gap-3">
                         <MapPin className="h-4 w-4 text-muted-foreground" />
                         <span>{member.address || 'No address provided'}</span>
+                    </div>
+                     <div className="flex items-center gap-3">
+                        <Cake className="h-4 w-4 text-muted-foreground" />
+                        <span>{member.dob ? format(new Date(member.dob), "do MMMM, yyyy") : 'Not specified'}</span>
                     </div>
                 </div>
             </CardContent>
@@ -110,7 +116,26 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                             <CardTitle>Personal & KYC Details</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p>Full personal details, KYC documents, and nominee information will appear here later.</p>
+                             <div className="grid gap-4">
+                                <div>
+                                    <h3 className="font-semibold mb-2">KYC Document</h3>
+                                    {member.kyc_document_url ? (
+                                        <div className="relative h-64 w-full">
+                                            <Image src={member.kyc_document_url} alt="KYC Document" layout="fill" objectFit="contain" className="rounded-md border"/>
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground">No KYC document uploaded.</p>
+                                    )}
+                                </div>
+                                 <div>
+                                    <h3 className="font-semibold mb-2">Nominee</h3>
+                                    <p className="text-sm">{member.nominee_name || 'Not specified'}</p>
+                                </div>
+                                <div>
+                                    <h3 className="font-semibold mb-2">Nominee Relationship</h3>
+                                    <p className="text-sm">{member.nominee_relationship || 'Not specified'}</p>
+                                </div>
+                            </div>
                         </CardContent>
                     </Card>
                 </TabsContent>
