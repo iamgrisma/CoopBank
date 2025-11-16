@@ -1,13 +1,8 @@
---
--- Supabase schema setup
---
+-- supabase/setup.sql
 
--- 1. Create all tables with IF NOT EXISTS
--- This ensures the script is safe to run multiple times without losing data.
-
--- members table
+-- 1. Create Members Table
 CREATE TABLE IF NOT EXISTS public.members (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE,
     phone VARCHAR(50),
@@ -18,123 +13,118 @@ CREATE TABLE IF NOT EXISTS public.members (
     kyc_document_url TEXT,
     nominee_name VARCHAR(255),
     nominee_relationship VARCHAR(100),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- loan_schemes table
+-- 2. Create Shares Table
+CREATE TABLE IF NOT EXISTS public.shares (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    member_id UUID REFERENCES public.members(id) ON DELETE CASCADE,
+    certificate_number VARCHAR(100) UNIQUE NOT NULL,
+    number_of_shares INT NOT NULL CHECK (number_of_shares > 0),
+    face_value NUMERIC(10, 2) NOT NULL CHECK (face_value > 0),
+    purchase_date DATE NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 3. Create Savings Table
+CREATE TABLE IF NOT EXISTS public.savings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    member_id UUID REFERENCES public.members(id) ON DELETE CASCADE,
+    amount NUMERIC(15, 2) NOT NULL CHECK (amount >= 0),
+    deposit_date DATE NOT NULL,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+-- Add a unique constraint to prevent duplicate deposits for the same member on the same day
+ALTER TABLE public.savings ADD CONSTRAINT unique_daily_saving UNIQUE (member_id, deposit_date);
+
+
+-- 4. Create Loan Schemes Table
 CREATE TABLE IF NOT EXISTS public.loan_schemes (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(255) NOT NULL UNIQUE,
-    default_interest_rate REAL NOT NULL,
-    max_term_months INTEGER NOT NULL,
-    min_term_months INTEGER NOT NULL,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) UNIQUE NOT NULL,
+    default_interest_rate NUMERIC(5, 2) NOT NULL,
+    min_term_months INT NOT NULL,
+    max_term_months INT NOT NULL,
     applicable_to TEXT[] NOT NULL, -- e.g., {'members', 'outsiders'}
     repayment_frequency VARCHAR(50) NOT NULL,
-    processing_fee_percentage REAL,
-    late_payment_penalty REAL,
+    processing_fee_percentage NUMERIC(5, 2) DEFAULT 0,
+    late_payment_penalty NUMERIC(10, 2) DEFAULT 0,
     offer_start_date DATE,
     offer_end_date DATE,
     is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- shares table (references members)
-CREATE TABLE IF NOT EXISTS public.shares (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    member_id uuid REFERENCES public.members(id) ON DELETE CASCADE,
-    certificate_number VARCHAR(255) NOT NULL UNIQUE,
-    number_of_shares INTEGER NOT NULL,
-    face_value REAL NOT NULL,
-    purchase_date DATE NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- savings table (references members)
-CREATE TABLE IF NOT EXISTS public.savings (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    member_id uuid REFERENCES public.members(id) ON DELETE CASCADE,
-    amount REAL NOT NULL,
-    deposit_date DATE NOT NULL,
-    notes TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(member_id, deposit_date) -- Prevents duplicate daily savings for the same member
-);
-
--- loans table (references members and loan_schemes)
+-- 5. Create Loans Table
 CREATE TABLE IF NOT EXISTS public.loans (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    member_id uuid REFERENCES public.members(id) ON DELETE CASCADE,
-    loan_scheme_id uuid REFERENCES public.loan_schemes(id),
-    amount REAL NOT NULL,
-    interest_rate REAL NOT NULL,
-    loan_term_months INTEGER NOT NULL,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    member_id UUID REFERENCES public.members(id) ON DELETE CASCADE,
+    loan_scheme_id UUID REFERENCES public.loan_schemes(id),
+    amount NUMERIC(15, 2) NOT NULL,
+    interest_rate NUMERIC(5, 2) NOT NULL,
+    loan_term_months INT NOT NULL,
     disbursement_date DATE NOT NULL,
     status VARCHAR(50) NOT NULL, -- e.g., Pending, Active, Paid Off, Rejected
     description TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- transactions table (references members)
+-- 6. Create Transactions Table
 CREATE TABLE IF NOT EXISTS public.transactions (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    member_id uuid REFERENCES public.members(id) ON DELETE CASCADE,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    member_id UUID REFERENCES public.members(id) ON DELETE CASCADE,
     member_name VARCHAR(255),
     type VARCHAR(100) NOT NULL, -- e.g., 'Share Purchase', 'Savings Deposit', 'Loan Disbursement'
-    amount REAL NOT NULL,
+    amount NUMERIC(15, 2) NOT NULL,
     date DATE NOT NULL,
     status VARCHAR(50) NOT NULL, -- e.g., 'Completed', 'Pending'
     description TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT now()
 );
 
 
--- 2. Enable Row Level Security (RLS) for all tables.
--- RLS is disabled by default. This is a crucial security step.
+-- ROW LEVEL SECURITY (RLS) POLICIES
 
+-- Enable RLS and create policies for `members` table
 ALTER TABLE public.members ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-all access" ON public.members;
+CREATE POLICY "Allow public read-all access" ON public.members FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "Allow authenticated write access" ON public.members;
+CREATE POLICY "Allow authenticated write access" ON public.members FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- Enable RLS and create policies for `shares` table
 ALTER TABLE public.shares ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-all access" ON public.shares;
+CREATE POLICY "Allow public read-all access" ON public.shares FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "Allow authenticated write access" ON public.shares;
+CREATE POLICY "Allow authenticated write access" ON public.shares FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- Enable RLS and create policies for `savings` table
 ALTER TABLE public.savings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-all access" ON public.savings;
+CREATE POLICY "Allow public read-all access" ON public.savings FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "Allow authenticated write access" ON public.savings;
+CREATE POLICY "Allow authenticated write access" ON public.savings FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- Enable RLS and create policies for `loan_schemes` table
 ALTER TABLE public.loan_schemes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-all access" ON public.loan_schemes;
+CREATE POLICY "Allow public read-all access" ON public.loan_schemes FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "Allow authenticated write access" ON public.loan_schemes;
+CREATE POLICY "Allow authenticated write access" ON public.loan_schemes FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- Enable RLS and create policies for `loans` table
 ALTER TABLE public.loans ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public read-all access" ON public.loans;
+CREATE POLICY "Allow public read-all access" ON public.loans FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "Allow authenticated write access" ON public.loans;
+CREATE POLICY "Allow authenticated write access" ON public.loans FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- Enable RLS and create policies for `transactions` table
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
-
-
--- 3. Create security policies to allow access.
--- These policies allow any authenticated user to perform all actions.
--- For production apps, you might want more granular, role-based policies.
-
-DROP POLICY IF EXISTS "Public access for authenticated users" ON public.members;
-CREATE POLICY "Public access for authenticated users" ON public.members FOR ALL
-TO authenticated
-USING (true)
-WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Public access for authenticated users" ON public.shares;
-CREATE POLICY "Public access for authenticated users" ON public.shares FOR ALL
-TO authenticated
-USING (true)
-WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Public access for authenticated users" ON public.savings;
-CREATE POLICY "Public access for authenticated users" ON public.savings FOR ALL
-TO authenticated
-USING (true)
-WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Public access for authenticated users" ON public.loan_schemes;
-CREATE POLICY "Public access for authenticated users" ON public.loan_schemes FOR ALL
-TO authenticated
-USING (true)
-WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Public access for authenticated users" ON public.loans;
-CREATE POLICY "Public access for authenticated users" ON public.loans FOR ALL
-TO authenticated
-USING (true)
-WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Public access for authenticated users" ON public.transactions;
-CREATE POLICY "Public access for authenticated users" ON public.transactions FOR ALL
-TO authenticated
-USING (true)
-WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow public read-all access" ON public.transactions;
+CREATE POLICY "Allow public read-all access" ON public.transactions FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "Allow authenticated write access" ON public.transactions;
+CREATE POLICY "Allow authenticated write access" ON public.transactions FOR ALL TO authenticated USING (true) WITH CHECK (true);
