@@ -1,94 +1,94 @@
--- Create the members table
-CREATE TABLE members (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name TEXT NOT NULL,
-    email TEXT UNIQUE,
-    phone TEXT,
-    address TEXT,
-    photo_url TEXT,
-    kyc_document_url TEXT,
-    join_date DATE NOT NULL,
-    dob DATE,
-    nominee_name TEXT,
-    nominee_relationship TEXT
-);
+-- Initial schema for CoopBank
 
--- Create the shares table
-CREATE TABLE shares (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    member_id UUID REFERENCES members(id) ON DELETE CASCADE,
-    certificate_number TEXT UNIQUE NOT NULL,
-    number_of_shares INTEGER NOT NULL,
-    face_value NUMERIC NOT NULL,
-    purchase_date DATE NOT NULL
-);
+-- Enable pgcrypto extension for UUIDs
+create extension if not exists pgcrypto with schema extensions;
 
--- Create the savings table
-CREATE TABLE savings (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    member_id UUID REFERENCES members(id) ON DELETE CASCADE,
-    amount NUMERIC NOT NULL,
-    deposit_date DATE NOT NULL,
-    notes TEXT,
-    CONSTRAINT unique_daily_saving UNIQUE (member_id, deposit_date)
+-- Members table
+create table if not exists public.members (
+    id uuid primary key default gen_random_uuid(),
+    name text not null,
+    email text unique,
+    phone text,
+    address text,
+    join_date date not null,
+    dob date,
+    photo_url text,
+    kyc_document_url text,
+    nominee_name text,
+    nominee_relationship text,
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+comment on table public.members is 'Stores information about each member of the cooperative.';
 
--- Create the loan_schemes table
-CREATE TABLE loan_schemes (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name TEXT UNIQUE NOT NULL,
-    description TEXT,
-    default_interest_rate NUMERIC NOT NULL,
-    max_term_months INTEGER NOT NULL
+-- Shares table
+create table if not exists public.shares (
+    id uuid primary key default gen_random_uuid(),
+    member_id uuid not null references public.members(id) on delete cascade,
+    certificate_number text not null unique,
+    number_of_shares integer not null check (number_of_shares > 0),
+    face_value numeric not null check (face_value > 0),
+    purchase_date date not null,
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+comment on table public.shares is 'Stores share purchase records for each member.';
 
--- Create the loans table
-CREATE TABLE loans (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    member_id UUID REFERENCES members(id) ON DELETE CASCADE,
-    loan_scheme_id UUID REFERENCES loan_schemes(id),
-    amount NUMERIC NOT NULL,
-    interest_rate NUMERIC NOT NULL,
-    loan_term_months INTEGER NOT NULL,
-    disbursement_date DATE NOT NULL,
-    status TEXT NOT NULL, -- e.g., Pending, Active, Paid Off, Rejected
-    description TEXT
+-- Savings table
+create table if not exists public.savings (
+    id uuid primary key default gen_random_uuid(),
+    member_id uuid not null references public.members(id) on delete cascade,
+    amount numeric not null check (amount > 0),
+    deposit_date date not null,
+    notes text,
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+    unique(member_id, deposit_date)
 );
+comment on table public.savings is 'Stores daily savings deposits for each member.';
 
--- Create the transactions table to log all financial activities
-CREATE TABLE transactions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    member_id UUID REFERENCES members(id),
-    member_name TEXT, -- Denormalized for easy display
-    type TEXT NOT NULL, -- e.g., 'Share Purchase', 'Savings Deposit', 'Loan Disbursement'
-    amount NUMERIC NOT NULL,
-    date DATE NOT NULL,
-    status TEXT NOT NULL, -- e.g., 'Completed', 'Pending'
-    description TEXT
+-- Loan Schemes table
+create table if not exists public.loan_schemes (
+    id uuid primary key default gen_random_uuid(),
+    name text not null unique,
+    description text,
+    default_interest_rate numeric not null,
+    max_term_months integer not null
 );
+comment on table public.loan_schemes is 'Defines the different types of loans available.';
+
+-- Loans table
+create table if not exists public.loans (
+    id uuid primary key default gen_random_uuid(),
+    member_id uuid not null references public.members(id) on delete cascade,
+    loan_scheme_id uuid not null references public.loan_schemes(id),
+    amount numeric not null,
+    interest_rate numeric not null,
+    loan_term_months integer not null,
+    disbursement_date date not null,
+    status text not null, -- e.g., 'Pending', 'Active', 'Paid Off', 'Rejected'
+    description text,
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+comment on table public.loans is 'Stores individual loan account information.';
+
+-- Transactions table
+create table if not exists public.transactions (
+    id uuid primary key default gen_random_uuid(),
+    member_id uuid not null references public.members(id) on delete cascade,
+    member_name text,
+    type text not null, -- e.g., 'Share Purchase', 'Savings Deposit', 'Loan Disbursement', 'Loan Repayment'
+    amount numeric not null,
+    date date not null,
+    status text not null, -- e.g. 'Completed', 'Pending'
+    description text,
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+comment on table public.transactions is 'A log of all financial transactions.';
 
 -- Pre-populate loan schemes
-INSERT INTO loan_schemes (name, description, default_interest_rate, max_term_months) VALUES
-('General Loan', 'A general purpose loan for members.', 12.5, 36),
-('Personal Loan', 'For personal expenses and needs.', 14.0, 24),
-('House Loan', 'For purchasing or constructing a house.', 10.5, 180),
-('Education Loan', 'For funding higher education.', 9.0, 60),
-('Outsiders Loan', 'A special loan category for non-members, if applicable.', 18.0, 12);
-
--- Enable Row Level Security (RLS)
-ALTER TABLE members ENABLE ROW LEVEL SECURITY;
-ALTER TABLE shares ENABLE ROW LEVEL SECURITY;
-ALTER TABLE savings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE loans ENABLE ROW LEVEL SECURITY;
-ALTER TABLE loan_schemes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
-
--- Create policies for public access (adjust as needed for your auth rules)
--- This allows authenticated users to access all data.
--- For production, you might want more restrictive policies.
-CREATE POLICY "Allow all access to authenticated users" ON members FOR ALL TO authenticated USING (true);
-CREATE POLICY "Allow all access to authenticated users" ON shares FOR ALL TO authenticated USING (true);
-CREATE POLICY "Allow all access to authenticated users" ON savings FOR ALL TO authenticated USING (true);
-CREATE POLICY "Allow all access to authenticated users" ON loans FOR ALL TO authenticated USING (true);
-CREATE POLICY "Allow all access to authenticated users" ON loan_schemes FOR ALL TO authenticated USING (true);
-CREATE POLICY "Allow all access to authenticated users" ON transactions FOR ALL TO authenticated USING (true);
+insert into public.loan_schemes (name, description, default_interest_rate, max_term_months)
+values
+    ('General Loan', 'A general purpose loan for members.', 12.5, 24),
+    ('Personal Loan', 'For personal expenses like marriage, travel, etc.', 14.0, 36),
+    ('House Loan', 'For purchasing or constructing a house.', 10.0, 180),
+    ('Education Loan', 'For financing higher education.', 9.5, 120),
+    ('Outsiders Loan', 'A special loan category for non-members, if applicable.', 16.0, 12)
+on conflict (name) do nothing;
