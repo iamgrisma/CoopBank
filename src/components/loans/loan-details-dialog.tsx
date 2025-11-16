@@ -61,7 +61,16 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
         .order('payment_date', { ascending: true });
 
       if (repaymentError) {
-        throw repaymentError;
+        toast({
+            variant: "destructive",
+            title: "Database Error",
+            description: "Could not fetch repayment history. The database may be out of date. Please run 'npm run db:full-setup' in your terminal and try again.",
+            duration: 10000,
+        });
+        setRepayments([]);
+        setSchedule([]);
+        setIdealSchedule([]);
+        return;
       }
 
       const fetchedRepayments = repaymentData || [];
@@ -85,15 +94,15 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
       setIdealSchedule(ideal);
 
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Database Error",
-        description: "Could not fetch repayment history. The database may be out of date. Please run 'npm run db:full-setup' in your terminal and try again.",
-        duration: 10000,
-      });
-      setRepayments([]);
-      setSchedule([]);
-      setIdealSchedule([]);
+        toast({
+            variant: "destructive",
+            title: "Application Error",
+            description: `An unexpected error occurred: ${error.message}`,
+            duration: 10000,
+        });
+        setRepayments([]);
+        setSchedule([]);
+        setIdealSchedule([]);
     } finally {
       setIsLoading(false);
     }
@@ -107,14 +116,15 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
   }, [open, fetchLoanData]);
   
   const handleRepaymentAdded = () => {
-      fetchLoanData(); // Refetch all data
-      router.refresh(); // Refresh server-side props if needed
+      fetchLoanData();
+      router.refresh();
   }
 
   const totalRepaid = calculateTotalRepaid(repayments);
   const totalPrincipalRepaid = repayments.reduce((acc, p) => acc + p.principal_paid, 0);
   const outstandingBalance = loan.amount - totalPrincipalRepaid;
   const totalInterestPaid = repayments.reduce((acc, p) => acc + p.interest_paid, 0);
+  const totalPenalInterestPaid = repayments.reduce((acc, p) => acc + (p.penal_interest_paid || 0), 0);
   const totalPenaltyPaid = repayments.reduce((acc, p) => acc + p.penalty_paid, 0);
   
   const totalDueToday = schedule.filter(s => s.status === 'DUE' || s.status === 'OVERDUE' || s.status === 'PARTIALLY_PAID').reduce((acc, s) => acc + s.totalDue, 0);
@@ -248,25 +258,27 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
                             <TableHead>Status</TableHead>
                             <TableHead className="text-right">Principal Due</TableHead>
                             <TableHead className="text-right">Interest Due</TableHead>
-                            <TableHead className="text-right">Penalty/Fine Due</TableHead>
+                            <TableHead className="text-right">Penal Interest</TableHead>
+                            <TableHead className="text-right">Fine Due</TableHead>
                             <TableHead className="text-right">Total Due</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                         {isLoading ? (
-                            <TableRow><TableCell colSpan={6} className="h-24 text-center">Loading schedule...</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={7} className="h-24 text-center">Loading schedule...</TableCell></TableRow>
                         ) : schedule.length > 0 ? schedule.map((entry) => (
                             <TableRow key={entry.month} className={entry.status === 'OVERDUE' ? 'bg-red-50 dark:bg-red-900/20' : ''}>
                                 <TableCell>{format(entry.paymentDate, "do MMM, yyyy")}</TableCell>
                                 <TableCell>{getStatusBadge(entry.status)}</TableCell>
-                                <TableCell className="text-right">{formatCurrency(entry.principal - entry.principalPaid)}</TableCell>
-                                <TableCell className="text-right">{formatCurrency(entry.interest - entry.interestPaid)}</TableCell>
-                                <TableCell className="text-right">{formatCurrency((entry.penalty + entry.penalInterest) - entry.penaltyPaid)}</TableCell>
+                                <TableCell className="text-right">{formatCurrency(Math.max(0, entry.principal - entry.principalPaid))}</TableCell>
+                                <TableCell className="text-right">{formatCurrency(Math.max(0, entry.interest - entry.interestPaid))}</TableCell>
+                                <TableCell className="text-right">{formatCurrency(Math.max(0, entry.penalInterest - entry.penalInterestPaid))}</TableCell>
+                                <TableCell className="text-right">{formatCurrency(Math.max(0, entry.penalty - entry.penaltyPaid))}</TableCell>
                                 <TableCell className="text-right font-semibold">{formatCurrency(entry.totalDue)}</TableCell>
                             </TableRow>
                             )) : (
                             <TableRow>
-                                <TableCell colSpan={6} className="h-24 text-center">
+                                <TableCell colSpan={7} className="h-24 text-center">
                                     No schedule to display. This might be due to an error fetching data.
                                 </TableCell>
                             </TableRow>
@@ -281,7 +293,7 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
             <AccordionItem value="repayment-history">
                 <AccordionTrigger className="text-base font-semibold">Repayment History</AccordionTrigger>
                 <AccordionContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-4 text-sm">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 py-4 text-sm">
                         <Card>
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-sm font-medium text-muted-foreground">Total Principal Paid</CardTitle>
@@ -300,7 +312,15 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
                         </Card>
                         <Card>
                             <CardHeader className="pb-2">
-                                <CardTitle className="text-sm font-medium text-muted-foreground">Total Penalty Paid</CardTitle>
+                                <CardTitle className="text-sm font-medium text-muted-foreground">Total Penal Interest Paid</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="font-bold text-lg">{formatCurrency(totalPenalInterestPaid)}</p>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-sm font-medium text-muted-foreground">Total Fines Paid</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <p className="font-bold text-lg">{formatCurrency(totalPenaltyPaid)}</p>
@@ -312,26 +332,28 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
                         <TableHeader className="sticky top-0 bg-background">
                         <TableRow>
                             <TableHead>Payment Date</TableHead>
-                            <TableHead className="text-right">Principal Paid</TableHead>
-                            <TableHead className="text-right">Interest Paid</TableHead>
-                            <TableHead className="text-right">Penalty Paid</TableHead>
+                            <TableHead className="text-right">Principal</TableHead>
+                            <TableHead className="text-right">Interest</TableHead>
+                            <TableHead className="text-right">Penal Int.</TableHead>
+                            <TableHead className="text-right">Fine</TableHead>
                             <TableHead className="text-right">Total Paid</TableHead>
                         </TableRow>
                         </TableHeader>
                         <TableBody>
                         {isLoading ? (
-                            <TableRow><TableCell colSpan={5} className="h-24 text-center">Loading history...</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={6} className="h-24 text-center">Loading history...</TableCell></TableRow>
                         ) : repayments.length > 0 ? repayments.map((entry) => (
                             <TableRow key={entry.id}>
                             <TableCell>{format(new Date(entry.payment_date), "do MMM, yyyy")}</TableCell>
                             <TableCell className="text-right">{formatCurrency(entry.principal_paid)}</TableCell>
                             <TableCell className="text-right">{formatCurrency(entry.interest_paid)}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(entry.penal_interest_paid)}</TableCell>
                             <TableCell className="text-right">{formatCurrency(entry.penalty_paid)}</TableCell>
                             <TableCell className="text-right font-semibold">{formatCurrency(entry.amount_paid)}</TableCell>
                             </TableRow>
                         )) : (
                             <TableRow>
-                                <TableCell colSpan={5} className="h-24 text-center">
+                                <TableCell colSpan={6} className="h-24 text-center">
                                     No repayments recorded yet.
                                 </TableCell>
                             </TableRow>
@@ -346,5 +368,3 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
     </Dialog>
   );
 }
-
-    

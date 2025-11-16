@@ -41,7 +41,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/
 type Allocation = {
   principal: number;
   interest: number;
-  penalty: number;
+  penalInterest: number;
+  fine: number;
   savings: number;
 }
 
@@ -51,7 +52,7 @@ const repaymentFormSchema = z.object({
   amount_paid: z.coerce.number().positive({ message: "Amount must be a positive number." }),
   payment_date: z.date({ required_error: "Payment date is required." }),
   notes: z.string().optional(),
-  waive_penalty: z.boolean().default(false),
+  waive_fine: z.boolean().default(false),
 });
 
 type RepaymentFormValues = z.infer<typeof repaymentFormSchema>;
@@ -69,7 +70,8 @@ async function addRepaymentToDb(repayment: Omit<RepaymentFormValues, 'payment_da
       notes: commonDetails.notes,
       principal_paid: allocation.principal,
       interest_paid: allocation.interest,
-      penalty_paid: repayment.waive_penalty ? 0 : allocation.penalty, // Record 0 if waived
+      penal_interest_paid: allocation.penalInterest,
+      penalty_paid: repayment.waive_fine ? 0 : allocation.fine,
     })
     .select();
 
@@ -77,6 +79,7 @@ async function addRepaymentToDb(repayment: Omit<RepaymentFormValues, 'payment_da
 
   // 2. Create corresponding transaction entries for income tracking
   const transactions = [];
+
   if (allocation.interest > 0) {
     transactions.push({
       member_id: commonDetails.member_id,
@@ -88,18 +91,28 @@ async function addRepaymentToDb(repayment: Omit<RepaymentFormValues, 'payment_da
       description: `Interest portion of repayment for loan ${commonDetails.loan_id}`
     });
   }
-  if (allocation.penalty > 0 && !repayment.waive_penalty) {
+   if (allocation.penalInterest > 0) {
+    transactions.push({
+      member_id: commonDetails.member_id,
+      member_name: commonDetails.member_name,
+      type: 'Penal Interest',
+      amount: allocation.penalInterest,
+      date: commonDetails.payment_date,
+      status: 'Completed',
+      description: `Penal interest portion of repayment for loan ${commonDetails.loan_id}`
+    });
+  }
+  if (allocation.fine > 0 && !repayment.waive_fine) {
     transactions.push({
       member_id: commonDetails.member_id,
       member_name: commonDetails.member_name,
       type: 'Penalty Income',
-      amount: allocation.penalty,
+      amount: allocation.fine,
       date: commonDetails.payment_date,
       status: 'Completed',
-      description: `Penalty portion of repayment for loan ${commonDetails.loan_id}`
+      description: `Fine portion of repayment for loan ${commonDetails.loan_id}`
     });
   }
-   // Add principal repayment transaction as well
    if (allocation.principal > 0) {
     transactions.push({
       member_id: commonDetails.member_id,
@@ -172,7 +185,7 @@ export function AddRepaymentForm({ loanId, memberId, memberName, schedule, onRep
       amount_paid: parseFloat(totalDue.toFixed(2)) || 0,
       payment_date: new Date(),
       notes: "",
-      waive_penalty: false,
+      waive_fine: false,
     },
   });
   
@@ -188,17 +201,15 @@ export function AddRepaymentForm({ loanId, memberId, memberName, schedule, onRep
         amount_paid: parseFloat(dueNow.toFixed(2)) || 0,
         payment_date: new Date(),
         notes: "",
-        waive_penalty: false,
+        waive_fine: false,
       });
     }
   }, [open, loanId, memberId, schedule, form]);
 
   const watchAmount = form.watch("amount_paid");
-  const watchWaivePenalty = form.watch("waive_penalty");
+  const watchWaiveFine = form.watch("waive_fine");
 
-  // This is no longer in a useEffect to prevent re-render loops.
-  // It's calculated on-the-fly during render.
-  const allocation = allocatePayment(watchAmount, overdueInstallments, watchWaivePenalty);
+  const allocation = allocatePayment(watchAmount, overdueInstallments, watchWaiveFine);
 
   const onSubmit = async (values: RepaymentFormValues) => {
     if (!allocation) {
@@ -289,11 +300,15 @@ export function AddRepaymentForm({ loanId, memberId, memberName, schedule, onRep
                 <div className="p-3 rounded-md border border-dashed text-sm grid gap-2">
                     <h4 className="font-semibold text-base">Payment Allocation</h4>
                      <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Penalty / Fine:</span>
-                        <span className={cn(form.getValues("waive_penalty") && "line-through text-muted-foreground")}>{formatCurrency(allocation.penalty)}</span>
+                        <span className="text-muted-foreground">Fine:</span>
+                        <span className={cn(form.getValues("waive_fine") && "line-through text-muted-foreground")}>{formatCurrency(allocation.fine)}</span>
+                    </div>
+                     <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Penal Interest:</span>
+                        <span>{formatCurrency(allocation.penalInterest)}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Interest:</span>
+                        <span className="text-muted-foreground">Regular Interest:</span>
                         <span>{formatCurrency(allocation.interest)}</span>
                     </div>
                      <div className="flex justify-between items-center">
@@ -311,7 +326,7 @@ export function AddRepaymentForm({ loanId, memberId, memberName, schedule, onRep
             
             <FormField
               control={form.control}
-              name="waive_penalty"
+              name="waive_fine"
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3">
                   <FormControl>
@@ -322,10 +337,10 @@ export function AddRepaymentForm({ loanId, memberId, memberName, schedule, onRep
                   </FormControl>
                   <div className="space-y-1 leading-none">
                     <FormLabel>
-                      Waive Penalty
+                      Waive Fine
                     </FormLabel>
                     <FormDescription>
-                      Check this to waive the calculated penalty amount.
+                      Check this to waive the 5% fine amount (penal interest will still apply).
                     </FormDescription>
                   </div>
                 </FormItem>
@@ -357,5 +372,3 @@ export function AddRepaymentForm({ loanId, memberId, memberName, schedule, onRep
     </Dialog>
   );
 }
-
-    
