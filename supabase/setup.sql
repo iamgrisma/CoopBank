@@ -1,78 +1,78 @@
--- Enable Row Level Security
-ALTER TABLE supabase_migrations.schema_migrations ENABLE ROW LEVEL SECURITY;
-
--- create members table
-CREATE TABLE IF NOT EXISTS public.members (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    name character varying,
-    email character varying,
-    phone character varying,
-    address text,
-    join_date date,
-    dob date,
-    nominee_name character varying,
-    nominee_relationship character varying,
-    photo_url text,
-    kyc_document_url text,
-    CONSTRAINT members_pkey PRIMARY KEY (id)
+-- Create members table
+CREATE TABLE IF NOT EXISTS members (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE,
+    phone VARCHAR(20),
+    address TEXT,
+    join_date DATE NOT NULL,
+    dob DATE,
+    nominee_name VARCHAR(255),
+    nominee_relationship VARCHAR(100),
+    photo_url TEXT,
+    kyc_document_url TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
-ALTER TABLE public.members ENABLE ROW LEVEL SECURITY;
 
--- create shares table
-CREATE TABLE IF NOT EXISTS public.shares (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    member_id uuid NOT NULL,
-    certificate_number character varying NOT NULL,
-    number_of_shares integer NOT NULL,
-    face_value numeric NOT NULL,
-    purchase_date date NOT NULL,
-    CONSTRAINT shares_pkey PRIMARY KEY (id),
-    CONSTRAINT shares_member_id_fkey FOREIGN KEY (member_id) REFERENCES public.members (id) ON DELETE CASCADE
+-- Create shares table
+CREATE TABLE IF NOT EXISTS shares (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    member_id UUID REFERENCES members(id) ON DELETE CASCADE,
+    certificate_number VARCHAR(100) UNIQUE NOT NULL,
+    number_of_shares INTEGER NOT NULL CHECK (number_of_shares > 0),
+    face_value NUMERIC(10, 2) NOT NULL CHECK (face_value > 0),
+    purchase_date DATE NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
-ALTER TABLE public.shares ENABLE ROW LEVEL SECURITY;
 
-
--- create savings table
-CREATE TABLE IF NOT EXISTS public.savings (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    member_id uuid NOT NULL,
-    amount numeric NOT NULL,
-    deposit_date date NOT NULL,
-    notes text,
-    CONSTRAINT savings_pkey PRIMARY KEY (id),
-    CONSTRAINT savings_member_id_fkey FOREIGN KEY (member_id) REFERENCES public.members (id) ON DELETE CASCADE
+-- Create savings table
+CREATE TABLE IF NOT EXISTS savings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    member_id UUID REFERENCES members(id) ON DELETE CASCADE,
+    amount NUMERIC(12, 2) NOT NULL CHECK (amount >= 0),
+    deposit_date DATE NOT NULL,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(member_id, deposit_date) -- Prevents multiple deposits for the same member on the same day
 );
-ALTER TABLE public.savings ENABLE ROW LEVEL SECURITY;
 
--- create transactions table
-CREATE TABLE IF NOT EXISTS public.transactions (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    member_id uuid,
-    member_name character varying,
-    "type" character varying,
-    amount numeric,
-    date date,
-    status character varying,
-    description text,
-    CONSTRAINT transactions_pkey PRIMARY KEY (id),
-    CONSTRAINT transactions_member_id_fkey FOREIGN KEY (member_id) REFERENCES public.members (id) ON DELETE SET NULL
+-- Create transactions table
+CREATE TABLE IF NOT EXISTS transactions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    member_id UUID REFERENCES members(id) ON DELETE CASCADE,
+    member_name VARCHAR(255),
+    type VARCHAR(100) NOT NULL,
+    amount NUMERIC(12, 2) NOT NULL,
+    date DATE NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
-ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 
--- Create policies for public access
-CREATE POLICY "Enable read access for all users" ON public.members FOR SELECT USING (true);
-CREATE POLICY "Enable insert for authenticated users" ON public.members FOR INSERT TO authenticated WITH CHECK (true);
-CREATE POLICY "Enable update for authenticated users" ON public.members FOR UPDATE TO authenticated USING (true);
+-- Create policies for RLS
+-- Members
+CREATE POLICY "Allow authenticated users to view members" ON members FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Allow authenticated users to insert members" ON members FOR INSERT TO authenticated WITH CHECK (true);
+CREATE POLICY "Allow authenticated users to update members" ON members FOR UPDATE TO authenticated USING (true);
+CREATE POLICY "Allow authenticated users to delete members" ON members FOR DELETE TO authenticated USING (true);
 
-CREATE POLICY "Enable read access for all users" ON public.shares FOR SELECT USING (true);
-CREATE POLICY "Enable insert for authenticated users" ON public.shares FOR INSERT TO authenticated WITH CHECK (true);
+-- Shares
+CREATE POLICY "Allow authenticated users to view shares" ON shares FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Allow authenticated users to insert shares" ON shares FOR INSERT TO authenticated WITH CHECK (true);
+CREATE POLICY "Allow authenticated users to update shares" ON shares FOR UPDATE TO authenticated USING (true);
+CREATE POLICY "Allow authenticated users to delete shares" ON shares FOR DELETE TO authenticated USING (true);
 
-CREATE POLICY "Enable read access for all users" ON public.savings FOR SELECT USING (true);
-CREATE POLICY "Enable insert for authenticated users" ON public.savings FOR INSERT TO authenticated WITH CHECK (true);
+-- Savings
+CREATE POLICY "Allow authenticated users to view savings" ON savings FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Allow authenticated users to insert savings" ON savings FOR INSERT TO authenticated WITH CHECK (true);
+CREATE POLICY "Allow authenticated users to update savings" ON savings FOR UPDATE TO authenticated USING (true);
+CREATE POLICY "Allow authenticated users to delete savings" ON savings FOR DELETE TO authenticated USING (true);
 
-CREATE POLICY "Enable read access for all users" ON public.transactions FOR SELECT USING (true);
-CREATE POLICY "Enable insert for authenticated users" ON public.transactions FOR INSERT TO authenticated WITH CHECK (true);
+-- Transactions
+CREATE POLICY "Allow authenticated users to view transactions" ON transactions FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Allow authenticated users to insert transactions" ON transactions FOR INSERT TO authenticated WITH CHECK (true);
+CREATE POLICY "Allow authenticated users to update transactions" ON transactions FOR UPDATE TO authenticated USING (true);
+CREATE POLICY "Allow authenticated users to delete transactions" ON transactions FOR DELETE TO authenticated USING (true);
