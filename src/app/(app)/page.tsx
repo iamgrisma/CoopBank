@@ -2,9 +2,11 @@ import { OverviewCards } from "@/components/dashboard/overview-cards";
 import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { CashFlowChart } from "@/components/dashboard/cash-flow-chart";
 import { FinancialStatements } from "@/components/dashboard/financial-statements";
-import { supabase } from "@/lib/supabase-client";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 async function getDashboardData() {
+  const supabase = createSupabaseServerClient();
+
   const { data: transactions, error: transactionsError } = await supabase
     .from('transactions')
     .select('*')

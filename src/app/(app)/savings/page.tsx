@@ -1,10 +1,11 @@
-import { supabase } from "@/lib/supabase-client";
 import { AddSaving } from "@/components/savings/add-saving";
 import { SavingsTable } from "@/components/savings/savings-table";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 async function getSavings() {
+  const supabase = createSupabaseServerClient();
   const { data: savings, error } = await supabase
     .from('savings')
     .select(`
@@ -24,6 +25,7 @@ async function getSavings() {
 }
 
 async function getMembers() {
+  const supabase = createSupabaseServerClient();
   const { data: members, error } = await supabase
     .from('members')
     .select('id, name')

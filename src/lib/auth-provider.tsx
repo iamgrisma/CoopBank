@@ -26,19 +26,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    router.push('/login');
   };
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
-        if (event === 'SIGNED_IN' && session?.user) {
-            setUser(session.user);
-            router.push('/');
-        } else if (event === 'SIGNED_OUT') {
+        if (session?.user) {
+          setUser(session.user);
+        } else {
           setUser(null);
-          router.push('/login');
         }
+        // Force a router refresh to re-run server components and fetch data
+        router.refresh();
         setLoading(false);
       }
     );

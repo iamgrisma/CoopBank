@@ -1,4 +1,3 @@
-import { supabase } from "@/lib/supabase-client";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,8 +11,10 @@ import { Button } from "@/components/ui/button";
 import { AddSaving } from "@/components/savings/add-saving";
 import { AddLoan } from "@/components/loans/add-loan";
 import { Badge } from "@/components/ui/badge";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 async function getMember(id: string) {
+  const supabase = createSupabaseServerClient();
   // The tables are defined in supabase/setup.sql
   const { data: member, error } = await supabase
     .from("members")
@@ -29,6 +30,7 @@ async function getMember(id: string) {
 }
 
 async function getShares(memberId: string) {
+    const supabase = createSupabaseServerClient();
     const { data: shares, error } = await supabase
         .from('shares')
         .select('*')
@@ -44,6 +46,7 @@ async function getShares(memberId: string) {
 }
 
 async function getSavings(memberId: string) {
+    const supabase = createSupabaseServerClient();
     const { data: savings, error } = await supabase
         .from('savings')
         .select('*')
@@ -58,6 +61,7 @@ async function getSavings(memberId: string) {
 }
 
 async function getLoans(memberId: string) {
+  const supabase = createSupabaseServerClient();
   const { data, error } = await supabase
     .from('loans')
     .select(`
@@ -75,6 +79,7 @@ async function getLoans(memberId: string) {
 }
 
 async function getLoanSchemes() {
+    const supabase = createSupabaseServerClient();
     const { data, error } = await supabase
         .from('loan_schemes')
         .select('*')

@@ -1,10 +1,11 @@
-import { supabase } from "@/lib/supabase-client";
 import { LoanSchemesTable } from "@/components/loans/loan-schemes-table";
 import { AddLoanScheme } from "@/components/loans/add-loan-scheme";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 async function getLoanSchemes() {
+    const supabase = createSupabaseServerClient();
     const { data: schemes, error } = await supabase
         .from('loan_schemes')
         .select('*')

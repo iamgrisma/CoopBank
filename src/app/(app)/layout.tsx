@@ -11,7 +11,6 @@ import {
   UsersRound,
   Wallet,
   ChevronDown,
-  CircleDot,
 } from "lucide-react";
 
 import { Header } from "@/components/header";
@@ -32,13 +31,12 @@ import { UserNav } from "@/components/user-nav";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth-provider";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  // The authentication check has been bypassed for development.
-  // To re-enable, uncomment the following section and the related imports.
-
-  /*
   const { user, loading } = useAuth();
   const router = useRouter();
 
@@ -48,17 +46,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [user, loading, router]);
 
-  if (loading || !user) {
-    // You can show a loading spinner here
+  const pathname = usePathname();
+  const isLoansActive = pathname.startsWith('/loans');
+  
+  if (loading) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         Loading...
       </div>
     );
   }
-  */
- const pathname = usePathname();
- const isLoansActive = pathname.startsWith('/loans');
 
   return (
     <SidebarProvider>

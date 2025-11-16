@@ -1,10 +1,11 @@
-import { supabase } from "@/lib/supabase-client";
 import { AddShare } from "@/components/shares/add-share";
 import { SharesTable } from "@/components/shares/shares-table";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 async function getShares() {
+  const supabase = createSupabaseServerClient();
   const { data: shares, error } = await supabase
     .from('shares')
     .select(`
@@ -24,6 +25,7 @@ async function getShares() {
 }
 
 async function getMembers() {
+  const supabase = createSupabaseServerClient();
   const { data: members, error } = await supabase
     .from('members')
     .select('id, name')
