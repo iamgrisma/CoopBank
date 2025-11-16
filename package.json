@@ -10,7 +10,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "db:setup": "cat supabase/setup.sql | npx supabase db push --password \"$POSTGRES_PASSWORD\""
+    "db:setup": "npx supabase db push"
   },
   "dependencies": {
     "@genkit-ai/google-genai": "^1.20.0",
