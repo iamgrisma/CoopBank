@@ -56,21 +56,14 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
       .order('payment_date', { ascending: true });
 
     if (repaymentError) {
-       if (repaymentError.code === '42P01') { 
-         toast({
-            variant: "destructive",
-            title: "Database Out of Date",
-            description: "The 'loan_repayments' table is missing. Please run 'npm run db:full-setup' in your terminal and try again.",
-            duration: 10000,
-         });
-      } else {
-        console.error("Error fetching repayments:", repaymentError);
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Could not fetch repayment history.",
-        });
-      }
+      // Catch 'relation does not exist' error and other potential errors
+      toast({
+        variant: "destructive",
+        title: "Could Not Fetch Repayment History",
+        description: "The 'loan_repayments' table might be missing or out of date. Please run 'npm run db:full-setup' in your terminal and try again.",
+        duration: 10000,
+      });
+      console.error("Error fetching repayments:", repaymentError);
       setRepayments([]);
       setSchedule([]);
     } else {
@@ -197,7 +190,7 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
                     )) : (
                      <TableRow>
                         <TableCell colSpan={6} className="h-24 text-center">
-                            No schedule to display.
+                            No schedule to display. This might be due to an error fetching data.
                         </TableCell>
                     </TableRow>
                     )
