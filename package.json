@@ -10,7 +10,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "db:full-setup": "cat supabase/setup.sql | npx supabase db remote"
+    "db:full-setup": "npx supabase db push"
   },
   "dependencies": {
     "@genkit-ai/google-genai": "^1.20.0",
@@ -64,7 +64,7 @@
     "@types/react-dom": "^18",
     "genkit-cli": "^1.20.0",
     "postcss": "^8",
-    "supabase": "^1.187.3",
+    "supabase": "^2.58.5",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
   }
