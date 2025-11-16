@@ -114,7 +114,7 @@ export function AddShare({ members, defaultMember, triggerButton }: AddShareProp
   const form = useForm<ShareFormValues>({
     resolver: zodResolver(shareFormSchema),
     defaultValues: {
-      member_id: defaultMember?.id,
+      member_id: defaultMember?.id || "",
       certificate_number: "",
       number_of_shares: 1,
       face_value: 100,
@@ -225,8 +225,8 @@ export function AddShare({ members, defaultMember, triggerButton }: AddShareProp
                                   value={member.name}
                                   key={member.id}
                                   onSelect={() => {
-                                    form.setValue("member_id", member.id);
-                                    setPopoverOpen(false);
+                                    form.setValue("member_id", member.id)
+                                    setPopoverOpen(false)
                                   }}
                                 >
                                   <Check
