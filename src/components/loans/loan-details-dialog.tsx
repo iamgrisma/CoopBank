@@ -41,13 +41,14 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
   const [open, setOpen] = React.useState(false);
   const [repayments, setRepayments] = React.useState<Repayment[]>([]);
   const [schedule, setSchedule] = React.useState<AmortizationEntry[]>([]);
+  const [isLoading, setIsLoading] = React.useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
   const fetchLoanData = React.useCallback(async () => {
-    if (!open || !loan.id) return;
+    if (!loan.id) return;
+    setIsLoading(true);
 
-    // Fetch Repayments
     const { data: repaymentData, error: repaymentError } = await supabase
       .from('loan_repayments')
       .select('*')
@@ -55,7 +56,7 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
       .order('payment_date', { ascending: true });
 
     if (repaymentError) {
-      if (repaymentError.code === '42P01') { // '42P01' is "undefined_table"
+      if (repaymentError.code === '42P01') { 
          toast({
             variant: "destructive",
             title: "Database Out of Date",
@@ -72,6 +73,7 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
       }
       setRepayments([]);
       setSchedule([]);
+      setIsLoading(false);
       return;
     } 
     
@@ -84,10 +86,13 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
         repaymentData || []
     );
     setSchedule(dynamicSchedule);
-  }, [open, loan.id, loan.amount, loan.interest_rate, loan.loan_term_months, loan.disbursement_date, toast]);
+    setIsLoading(false);
+  }, [loan.id, loan.amount, loan.interest_rate, loan.loan_term_months, loan.disbursement_date, toast]);
 
   React.useEffect(() => {
-    fetchLoanData();
+    if (open) {
+      fetchLoanData();
+    }
   }, [open, fetchLoanData]);
   
   const handleRepaymentAdded = () => {
@@ -96,7 +101,11 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
   }
 
   const totalRepaid = calculateTotalRepaid(repayments);
-  const outstandingBalance = loan.amount - repayments.reduce((acc, p) => acc + p.principal_paid, 0);
+  const totalPrincipalRepaid = repayments.reduce((acc, p) => acc + p.principal_paid, 0);
+  const outstandingBalance = loan.amount - totalPrincipalRepaid;
+  const totalInterestPaid = repayments.reduce((acc, p) => acc + p.interest_paid, 0);
+  const totalPenaltyPaid = repayments.reduce((acc, p) => acc + p.penalty_paid, 0);
+  const totalDueToday = schedule.filter(s => s.status === 'DUE' || s.status === 'OVERDUE').reduce((acc, s) => acc + s.totalDue, 0);
 
   const getStatusBadge = (status: AmortizationEntry['status']) => {
     switch (status) {
@@ -110,7 +119,6 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
             return <Badge variant="secondary">Upcoming</Badge>;
     }
   }
-
 
   const defaultTrigger = (
      <DropdownMenu>
@@ -128,7 +136,7 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      {trigger ? <div onClick={() => setOpen(true)}>{trigger}</div> : defaultTrigger}
+      {trigger ? <div onClick={(e) => { e.stopPropagation(); setOpen(true); }}>{trigger}</div> : defaultTrigger}
       <DialogContent className="sm:max-w-5xl">
         <DialogHeader>
           <DialogTitle>Loan Details & Repayments</DialogTitle>
@@ -146,16 +154,16 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
           <TabsContent value="repayments">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 py-4 text-sm">
                 <div className="p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
-                    <h3 className="text-muted-foreground">Principal Amount</h3>
-                    <p className="font-bold text-lg">{formatCurrency(loan.amount)}</p>
+                    <h3 className="text-muted-foreground">Outstanding Principal</h3>
+                    <p className="font-bold text-lg text-red-600">{formatCurrency(outstandingBalance)}</p>
                 </div>
                 <div className="p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
                     <h3 className="text-muted-foreground">Total Repaid</h3>
                     <p className="font-bold text-lg text-green-600">{formatCurrency(totalRepaid)}</p>
                 </div>
-                <div className="p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
-                    <h3 className="text-muted-foreground">Outstanding Principal</h3>
-                    <p className="font-bold text-lg text-red-600">{formatCurrency(outstandingBalance)}</p>
+                 <div className="p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
+                    <h3 className="text-muted-foreground">Total Interest Paid</h3>
+                    <p className="font-bold text-lg">{formatCurrency(totalInterestPaid)}</p>
                 </div>
                  <div className="flex items-center justify-center">
                     <AddRepaymentForm 
@@ -182,7 +190,9 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {repayments.length > 0 ? repayments.map((entry) => (
+                  {isLoading ? (
+                     <TableRow><TableCell colSpan={5} className="h-24 text-center">Loading history...</TableCell></TableRow>
+                  ) : repayments.length > 0 ? repayments.map((entry) => (
                     <TableRow key={entry.id}>
                       <TableCell>{format(new Date(entry.payment_date), "do MMM, yyyy")}</TableCell>
                       <TableCell className="text-right">{formatCurrency(entry.principal_paid)}</TableCell>
@@ -210,15 +220,15 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
                 </div>
                  <div className="p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
                     <h3 className="text-muted-foreground">Total Due Today</h3>
-                    <p className="font-bold text-lg text-orange-600">{formatCurrency(schedule.filter(s => s.status === 'DUE' || s.status === 'OVERDUE').reduce((acc, s) => acc + s.totalDue, 0))}</p>
+                    <p className="font-bold text-lg text-orange-600">{formatCurrency(totalDueToday)}</p>
                 </div>
                 <div className="p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
                     <h3 className="text-muted-foreground">Total Interest Paid</h3>
-                    <p className="font-bold text-lg">{formatCurrency(repayments.reduce((acc, p) => acc + p.interest_paid, 0))}</p>
+                    <p className="font-bold text-lg">{formatCurrency(totalInterestPaid)}</p>
                 </div>
                  <div className="p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
                     <h3 className="text-muted-foreground">Total Penalty Paid</h3>
-                    <p className="font-bold text-lg">{formatCurrency(repayments.reduce((acc, p) => acc + p.penalty_paid, 0))}</p>
+                    <p className="font-bold text-lg">{formatCurrency(totalPenaltyPaid)}</p>
                 </div>
             </div>
 
@@ -235,7 +245,9 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {schedule.map((entry) => (
+                   {isLoading ? (
+                     <TableRow><TableCell colSpan={6} className="h-24 text-center">Loading schedule...</TableCell></TableRow>
+                  ) : schedule.map((entry) => (
                     <TableRow key={entry.month} className={entry.status === 'OVERDUE' ? 'bg-red-50 dark:bg-red-900/20' : ''}>
                         <TableCell>{format(entry.paymentDate, "do MMM, yyyy")}</TableCell>
                         <TableCell>{getStatusBadge(entry.status)}</TableCell>
