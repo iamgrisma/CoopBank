@@ -6,34 +6,50 @@ import {
 } from "@/components/ui/card"
 import { HandCoins, Landmark, UsersRound, Wallet } from "lucide-react"
 
-const overviewData = [
-  {
-    icon: UsersRound,
-    title: "Total Members",
-    value: "1,245",
-    description: "+20.1% from last month",
-  },
-  {
-    icon: Landmark,
-    title: "Total Shares",
-    value: "रु 2,350,000",
-    description: "+180.1% from last month",
-  },
-  {
-    icon: Wallet,
-    title: "Total Savings",
-    value: "रु 12,234,000",
-    description: "+19% from last month",
-  },
-  {
-    icon: HandCoins,
-    title: "Total Loans",
-    value: "रु 8,543,000",
-    description: "+21% from last month",
-  },
-]
+type OverviewData = {
+  members: number;
+  shares: number;
+  savings: number;
+  loans: number;
+}
 
-export function OverviewCards() {
+const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'NPR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount).replace('NPR', 'रु');
+}
+
+export function OverviewCards({ overview }: { overview: OverviewData }) {
+  const overviewData = [
+    {
+      icon: UsersRound,
+      title: "Total Members",
+      value: overview.members.toLocaleString('en-IN'),
+      description: "All registered members",
+    },
+    {
+      icon: Landmark,
+      title: "Total Shares",
+      value: formatCurrency(overview.shares),
+      description: "Total share capital value",
+    },
+    {
+      icon: Wallet,
+      title: "Total Savings",
+      value: formatCurrency(overview.savings),
+      description: "Across all savings accounts",
+    },
+    {
+      icon: HandCoins,
+      title: "Total Loans",
+      value: formatCurrency(overview.loans),
+      description: "Total outstanding loan amount",
+    },
+  ]
+
   return (
     <>
       {overviewData.map((item, index) => (
