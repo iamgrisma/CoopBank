@@ -10,7 +10,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "db:setup": "npx supabase db push"
+    "db:full-setup": "npx supabase link --project-ref hkmdrcvtbupjiumbxwzn && npx supabase db push"
   },
   "dependencies": {
     "@genkit-ai/google-genai": "^1.20.0",
