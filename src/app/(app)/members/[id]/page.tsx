@@ -130,7 +130,7 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                                  <div>
                                     <h3 className="font-semibold mb-2">Nominee</h3>
                                     <p className="text-sm">{member.nominee_name || 'Not specified'}</p>
-                                </div>
+                                 </div>
                                 <div>
                                     <h3 className="font-semibold mb-2">Nominee Relationship</h3>
                                     <p className="text-sm">{member.nominee_relationship || 'Not specified'}</p>

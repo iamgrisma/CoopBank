@@ -1,100 +1,61 @@
--- Create the members table
-CREATE TABLE IF NOT EXISTS members (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) UNIQUE,
-    phone VARCHAR(20),
-    address TEXT,
-    join_date DATE NOT NULL,
-    dob DATE,
-    photo_url TEXT,
-    kyc_document_url TEXT,
-    nominee_name VARCHAR(255),
-    nominee_relationship VARCHAR(100),
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+-- Enable pgcrypto extension for gen_random_uuid()
+create extension if not exists pgcrypto with schema extensions;
+
+-- Members Table
+drop table if exists members;
+create table members (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  email text unique,
+  phone text,
+  address text,
+  join_date date not null default current_date,
+  dob date, -- Date of Birth
+  nominee_name text,
+  nominee_relationship text,
+  photo_url text,
+  kyc_document_url text, -- URL for KYC document
+  created_at timestamptz default now()
 );
 
--- Create the transactions table
-CREATE TABLE IF NOT EXISTS transactions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    member_id UUID REFERENCES members(id),
-    member_name VARCHAR(255), -- Denormalized for easy display
-    type VARCHAR(50) NOT NULL, -- e.g., 'Share Purchase', 'Loan Repayment', 'Savings Deposit'
-    amount DECIMAL(15, 2) NOT NULL,
-    date DATE NOT NULL,
-    status VARCHAR(50) DEFAULT 'Completed', -- e.g., 'Completed', 'Pending', 'Failed'
-    description TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+-- Transactions Table
+drop table if exists transactions;
+create table transactions (
+    id uuid primary key default gen_random_uuid(),
+    member_name text not null,
+    type text not null,
+    status text not null check (status in ('Completed', 'Pending')),
+    date date not null default current_date,
+    amount numeric(15, 2) not null,
+    created_at timestamptz default now()
 );
 
--- Function to update the updated_at column
-CREATE OR REPLACE FUNCTION trigger_set_timestamp()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Trigger for members table
-CREATE TRIGGER set_timestamp_members
-BEFORE UPDATE ON members
-FOR EACH ROW
-EXECUTE FUNCTION trigger_set_timestamp();
-
--- Enable Row Level Security (RLS)
-ALTER TABLE members ENABLE ROW LEVEL SECURITY;
-ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
-
--- Policies for members table
--- Allow authenticated users to view all members
-CREATE POLICY "Allow authenticated users to view all members"
-ON members
-FOR SELECT
-TO authenticated
-USING (true);
-
--- Allow users to insert new members
-CREATE POLICY "Allow authenticated users to insert new members"
-ON members
-FOR INSERT
-TO authenticated
-WITH CHECK (true);
-
--- Allow users to update their own member info (future use)
-CREATE POLICY "Allow users to update their own info"
-ON members
-FOR UPDATE
-TO authenticated
-USING (auth.uid() = id)
-WITH CHECK (auth.uid() = id);
-
--- Policies for transactions table
--- Allow authenticated users to view all transactions
-CREATE POLICY "Allow authenticated users to view all transactions"
-ON transactions
-FOR SELECT
-TO authenticated
-USING (true);
-
--- Allow authenticated users to insert transactions
-CREATE POLICY "Allow authenticated users to insert transactions"
-ON transactions
-FOR INSERT
-TO authenticated
-WITH CHECK (true);
+-- Insert sample data into members table
+insert into members (name, email, phone, address, join_date, dob, nominee_name, nominee_relationship, photo_url, kyc_document_url) values
+('Aarav Sharma', 'aarav.sharma@example.com', '9801234567', 'Kathmandu, Nepal', '2023-01-15', '1990-05-20', 'Priya Sharma', 'Spouse', 'https://picsum.photos/seed/1/200/200', 'https://picsum.photos/seed/101/400/300'),
+('Saanvi Joshi', 'saanvi.joshi@example.com', '9812345678', 'Pokhara, Nepal', '2023-02-20', '1985-11-12', 'Rohan Joshi', 'Brother', 'https://picsum.photos/seed/2/200/200', null),
+('Vivaan Thapa', 'vivaan.thapa@example.com', '9823456789', 'Lalitpur, Nepal', '2023-03-10', '1995-02-28', 'Anaya Thapa', 'Daughter', 'https://picsum.photos/seed/3/200/200', 'https://picsum.photos/seed/103/400/300'),
+('Anaya Gurung', 'anaya.gurung@example.com', '9834567890', 'Bhaktapur, Nepal', '2023-04-05', '2000-08-10', 'Aarav Gurung', 'Father', 'https://picsum.photos/seed/4/200/200', null),
+('Reyansh Adhikari', 'reyansh.adhikari@example.com', '9845678901', 'Kathmandu, Nepal', '2023-05-21', '1992-07-22', 'Mira Adhikari', 'Spouse', 'https://picsum.photos/seed/5/200/200', 'https://picsum.photos/seed/105/400/300');
 
 
--- Insert some sample members
-INSERT INTO members (name, email, phone, address, join_date, dob) VALUES
-('Grisma Pokharel', 'iamgrisma@gmail.com', '9841234567', 'Kathmandu, Nepal', '2023-01-15', '1990-05-20'),
-('Sunil Thapa', 'sunil.thapa@example.com', '9851098765', 'Pokhara, Nepal', '2023-02-20', '1988-11-30'),
-('Priya Gurung', 'priya.gurung@example.com', '9803456789', 'Butwal, Nepal', '2023-03-10', '1995-02-10');
+-- Insert sample data into transactions table
+insert into transactions (member_name, type, status, date, amount) values
+('Aarav Sharma', 'Share Purchase', 'Completed', '2024-05-01', 50000.00),
+('Saanvi Joshi', 'Savings Deposit', 'Completed', '2024-05-02', 10000.00),
+('Vivaan Thapa', 'Loan Repayment', 'Completed', '2024-05-03', 15000.00),
+('Anaya Gurung', 'Savings Deposit', 'Pending', '2024-05-04', 5000.00),
+('Reyansh Adhikari', 'Share Purchase', 'Completed', '2024-05-05', 25000.00),
+('Aarav Sharma', 'Loan Disbursement', 'Completed', '2024-05-06', 100000.00),
+('Saanvi Joshi', 'Share Purchase', 'Completed', '2024-05-07', 30000.00),
+('Vivaan Thapa', 'Savings Deposit', 'Completed', '2024-05-08', 20000.00),
+('Anaya Gurung', 'Loan Repayment', 'Pending', '2024-05-09', 7500.00),
+('Reyansh Adhikari', 'Savings Deposit', 'Completed', '2024-05-10', 12000.00);
 
--- Insert some sample transactions
-INSERT INTO transactions (member_id, member_name, type, amount, date, status) VALUES
-((SELECT id FROM members WHERE email = 'iamgrisma@gmail.com'), 'Grisma Pokharel', 'Savings Deposit', 5000.00, '2024-05-01', 'Completed'),
-((SELECT id FROM members WHERE email = 'sunil.thapa@example.com'), 'Sunil Thapa', 'Share Purchase', 10000.00, '2024-05-03', 'Completed'),
-((SELECT id FROM members WHERE email = 'priya.gurung@example.com'), 'Priya Gurung', 'Loan Repayment', 2500.00, '2024-05-05', 'Pending'),
-((SELECT id FROM members WHERE email = 'iamgrisma@gmail.com'), 'Grisma Pokharel', 'Share Purchase', 2000.00, '2024-05-10', 'Completed');
+-- Set up Realtime
+begin;
+  drop publication if exists supabase_realtime;
+  create publication supabase_realtime;
+commit;
+alter publication supabase_realtime add table members;
+alter publication supabase_realtime add table transactions;
