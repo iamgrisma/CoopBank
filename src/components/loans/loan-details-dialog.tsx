@@ -56,14 +56,12 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
       .order('payment_date', { ascending: true });
 
     if (repaymentError) {
-      // Catch 'relation does not exist' error and other potential errors
       toast({
         variant: "destructive",
         title: "Could Not Fetch Repayment History",
-        description: "The 'loan_repayments' table might be missing or out of date. Please run 'npm run db:full-setup' in your terminal and try again.",
+        description: "The database may be out of date. Please run 'npm run db:full-setup' in your terminal and try again.",
         duration: 10000,
       });
-      console.error("Error fetching repayments:", repaymentError);
       setRepayments([]);
       setSchedule([]);
     } else {
@@ -80,6 +78,7 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
     
     setIsLoading(false);
   }, [loan.id, loan.amount, loan.interest_rate, loan.loan_term_months, loan.disbursement_date, toast]);
+
 
   React.useEffect(() => {
     if (open) {
