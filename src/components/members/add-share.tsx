@@ -32,7 +32,6 @@ import { supabase } from "@/lib/supabase-client";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
 import { cn } from "@/lib/utils";
-import { revalidatePath } from "next/cache";
 
 const shareFormSchema = z.object({
     certificate_number: z.string().min(1, { message: "Certificate number is required." }),
