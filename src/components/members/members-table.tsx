@@ -73,7 +73,7 @@ export function MembersTable({ members }: { members: Member[] }) {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className="flex flex-col">
+                  <div className="flex flex-col break-all">
                     <span>{member.email}</span>
                     <span className="text-muted-foreground">{member.phone}</span>
                   </div>

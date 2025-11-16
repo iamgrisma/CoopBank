@@ -156,9 +156,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <div className="flex flex-col">
+        <div className="flex h-screen w-full flex-col">
           <Header />
-          {children}
+          <div className="flex-1 overflow-y-auto">
+            {children}
+          </div>
         </div>
       </SidebarInset>
     </SidebarProvider>
