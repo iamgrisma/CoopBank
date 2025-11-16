@@ -44,7 +44,7 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
   const router = useRouter();
   const { toast } = useToast();
 
-  const fetchLoanData = async () => {
+  const fetchLoanData = React.useCallback(async () => {
     if (!open || !loan.id) return;
 
     // Fetch Repayments
@@ -52,10 +52,10 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
       .from('loan_repayments')
       .select('*')
       .eq('loan_id', loan.id)
-      .order('payment_date', { ascending: false });
+      .order('payment_date', { ascending: true });
 
     if (repaymentError) {
-      if (repaymentError.code === '42P01') {
+      if (repaymentError.code === '42P01') { // '42P01' is "undefined_table"
          toast({
             variant: "destructive",
             title: "Database Out of Date",
@@ -64,13 +64,18 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
          });
       } else {
         console.error("Error fetching repayments:", repaymentError);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Could not fetch repayment history.",
+        });
       }
       setRepayments([]);
-    } else {
-      setRepayments(repaymentData);
-    }
-
-    // Generate schedule after fetching repayments
+      setSchedule([]);
+      return;
+    } 
+    
+    setRepayments(repaymentData || []);
     const dynamicSchedule = generateDynamicAmortizationSchedule(
         loan.amount,
         loan.interest_rate,
@@ -79,11 +84,11 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
         repaymentData || []
     );
     setSchedule(dynamicSchedule);
-  };
+  }, [open, loan.id, loan.amount, loan.interest_rate, loan.loan_term_months, loan.disbursement_date, toast]);
 
   React.useEffect(() => {
     fetchLoanData();
-  }, [open, loan.id]);
+  }, [open, fetchLoanData]);
   
   const handleRepaymentAdded = () => {
       fetchLoanData(); // Refetch all data
