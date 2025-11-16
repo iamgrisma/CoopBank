@@ -65,3 +65,15 @@ export const formatCurrency = (amount: number) => {
       minimumFractionDigits: 2,
     }).format(amount).replace('NPR', 'रु');
 }
+
+export type Repayment = {
+    id: string;
+    loan_id: string;
+    payment_date: string;
+    amount_paid: number;
+    notes: string | null;
+};
+
+export const calculateTotalRepaid = (repayments: Repayment[]): number => {
+    return repayments.reduce((acc, repayment) => acc + repayment.amount_paid, 0);
+};

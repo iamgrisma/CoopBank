@@ -67,7 +67,8 @@ async function getLoans(memberId: string) {
     .from('loans')
     .select(`
       *,
-      loan_schemes (name)
+      loan_schemes (name),
+      members (name)
     `)
     .eq('member_id', memberId)
     .order('disbursement_date', { ascending: false });
