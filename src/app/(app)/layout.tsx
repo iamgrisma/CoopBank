@@ -120,7 +120,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Reports">
-                  <Link href="#">
+                  <Link href="/reports">
                     <FilePieChart />
                     <span>Reports</span>
                   </Link>
