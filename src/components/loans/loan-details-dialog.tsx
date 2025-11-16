@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -19,6 +20,7 @@ import { supabase } from "@/lib/supabase-client";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { AddRepaymentForm } from "./add-repayment";
+import { useToast } from "@/hooks/use-toast";
 
 type Loan = {
   id: string;
@@ -39,6 +41,7 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
   const [open, setOpen] = React.useState(false);
   const [repayments, setRepayments] = React.useState<Repayment[]>([]);
   const router = useRouter();
+  const { toast } = useToast();
 
   React.useEffect(() => {
     if (open) {
@@ -54,7 +57,17 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
       .order('payment_date', { ascending: false });
     
     if (error) {
-      console.error("Error fetching repayments:", error);
+      // Check for a specific error code that indicates a missing table
+      if (error.code === '42P01') {
+         toast({
+            variant: "destructive",
+            title: "Database Out of Date",
+            description: "The 'loan_repayments' table is missing. Please run 'npm run db:full-setup' in your terminal and try again.",
+            duration: 10000,
+         });
+      } else {
+        console.error("Error fetching repayments:", error);
+      }
     } else {
       setRepayments(data);
     }
