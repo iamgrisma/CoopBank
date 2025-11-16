@@ -158,7 +158,10 @@ export function AddRepaymentForm({ loanId, memberId, memberName, schedule, onRep
   const [allocation, setAllocation] = React.useState<Allocation | null>(null);
   const { toast } = useToast();
 
-  const overdueInstallments = schedule.filter(inst => inst.status === 'OVERDUE' || inst.status === 'DUE');
+  const overdueInstallments = React.useMemo(() => {
+    return schedule.filter(inst => inst.status === 'OVERDUE' || inst.status === 'DUE');
+  }, [schedule]);
+
   const totalDue = overdueInstallments.reduce((acc, inst) => acc + inst.totalDue, 0);
 
   const form = useForm<RepaymentFormValues>({
