@@ -40,115 +40,107 @@ import {
   CommandItem,
   CommandList
 } from "@/components/ui/command";
+import { Textarea } from "../ui/textarea";
 
 type Member = {
   id: string;
   name: string;
 };
 
-const shareFormSchema = z.object({
+const savingFormSchema = z.object({
   member_id: z.string({ required_error: "Please select a member." }),
-  certificate_number: z.string().min(1, { message: "Certificate number is required." }),
-  number_of_shares: z.coerce.number().int().min(1, { message: "Number of shares must be at least 1." }),
-  face_value: z.coerce.number().positive({ message: "Face value must be a positive number." }),
-  purchase_date: z.date({ required_error: "Purchase date is required." }),
+  amount: z.coerce.number().positive({ message: "Amount must be a positive number." }),
+  deposit_date: z.date({ required_error: "Deposit date is required." }),
+  notes: z.string().optional(),
 });
 
-type ShareFormValues = z.infer<typeof shareFormSchema>;
+type SavingFormValues = z.infer<typeof savingFormSchema>;
 
-async function addShareToDb(share: Omit<ShareFormValues, 'purchase_date'> & { purchase_date: string, member_name: string }) {
-  // 1. Add the share record
-  const { data: shareData, error: shareError } = await supabase
-    .from("shares")
+async function addSavingToDb(saving: Omit<SavingFormValues, 'deposit_date'> & { deposit_date: string, member_name: string }) {
+  // 1. Add the saving record
+  const { data: savingData, error: savingError } = await supabase
+    .from("savings")
     .insert({
-      member_id: share.member_id,
-      certificate_number: share.certificate_number,
-      number_of_shares: share.number_of_shares,
-      face_value: share.face_value,
-      purchase_date: share.purchase_date,
+      member_id: saving.member_id,
+      amount: saving.amount,
+      deposit_date: saving.deposit_date,
+      notes: saving.notes,
     })
     .select();
 
-  if (shareError) {
-    throw new Error(`Error adding share: ${shareError.message}`);
+  if (savingError) {
+    throw new Error(`Error adding saving: ${savingError.message}`);
   }
 
   // 2. Create a corresponding transaction
-  const transactionAmount = share.number_of_shares * share.face_value;
   const { error: transactionError } = await supabase
     .from("transactions")
     .insert({
-      member_id: share.member_id,
-      member_name: share.member_name,
-      type: 'Share Purchase',
-      amount: transactionAmount,
-      date: share.purchase_date,
+      member_id: saving.member_id,
+      member_name: saving.member_name,
+      type: 'Savings Deposit',
+      amount: saving.amount,
+      date: saving.deposit_date,
       status: 'Completed',
-      description: `Purchased ${share.number_of_shares} shares (Cert: ${share.certificate_number})`
+      description: `Daily saving deposit. ${saving.notes || ''}`
     });
 
   if (transactionError) {
-    // If the transaction fails, we should ideally roll back the share purchase.
-    // For simplicity here, we'll just log an error.
-    // A more robust solution would use a database transaction.
-    console.error(`Share added, but failed to create transaction: ${transactionError.message}`);
-    throw new Error(`Share added, but failed to create transaction: ${transactionError.message}`);
+    console.error(`Saving added, but failed to create transaction: ${transactionError.message}`);
+    throw new Error(`Saving added, but failed to create transaction: ${transactionError.message}`);
   }
 
-  return shareData;
+  return savingData;
 }
 
-interface AddShareProps {
+interface AddSavingProps {
   members?: Member[];
   defaultMember?: Member;
   triggerButton: React.ReactNode;
 }
 
-export function AddShare({ members, defaultMember, triggerButton }: AddShareProps) {
+export function AddSaving({ members, defaultMember, triggerButton }: AddSavingProps) {
   const [open, setOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
-  const form = useForm<ShareFormValues>({
-    resolver: zodResolver(shareFormSchema),
+  const form = useForm<SavingFormValues>({
+    resolver: zodResolver(savingFormSchema),
     defaultValues: {
       member_id: defaultMember?.id || "",
-      certificate_number: "",
-      number_of_shares: 1,
-      face_value: 100,
-      purchase_date: new Date(),
+      amount: 0,
+      deposit_date: new Date(),
+      notes: "",
     },
   });
 
-  // Reset form when the dialog opens, especially for default member
   React.useEffect(() => {
     if (open) {
       form.reset({
         member_id: defaultMember?.id || "",
-        certificate_number: "",
-        number_of_shares: 1,
-        face_value: 100,
-        purchase_date: new Date(),
+        amount: 0,
+        deposit_date: new Date(),
+        notes: "",
       });
     }
   }, [open, defaultMember, form]);
 
-  const onSubmit = async (values: ShareFormValues) => {
+  const onSubmit = async (values: SavingFormValues) => {
     setIsSubmitting(true);
     try {
       const allMembers = members || (defaultMember ? [defaultMember] : []);
       const memberName = allMembers.find(m => m.id === values.member_id)?.name || 'Unknown Member';
 
-      const shareData = {
+      const savingData = {
         ...values,
-        purchase_date: values.purchase_date.toISOString().split('T')[0], // format as YYYY-MM-DD
+        deposit_date: values.deposit_date.toISOString().split('T')[0], // format as YYYY-MM-DD
         member_name: memberName
       }
-      await addShareToDb(shareData);
+      await addSavingToDb(savingData);
       toast({
-        title: "Share Purchase Added",
-        description: `Successfully recorded share purchase for ${memberName}.`,
+        title: "Savings Deposit Added",
+        description: `Successfully recorded deposit for ${memberName}.`,
       });
       form.reset();
       setOpen(false);
@@ -156,7 +148,7 @@ export function AddShare({ members, defaultMember, triggerButton }: AddShareProp
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Error adding share purchase",
+        title: "Error adding deposit",
         description: error.message,
       });
     } finally {
@@ -171,9 +163,9 @@ export function AddShare({ members, defaultMember, triggerButton }: AddShareProp
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add Share Purchase</DialogTitle>
+          <DialogTitle>Add Savings Deposit</DialogTitle>
           <DialogDescription>
-            Record a new share purchase for a member.
+            Record a new daily savings deposit for a member.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -242,36 +234,10 @@ export function AddShare({ members, defaultMember, triggerButton }: AddShareProp
             )}
             <FormField
               control={form.control}
-              name="certificate_number"
+              name="amount"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Certificate Number</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. SH-101" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="number_of_shares"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Number of Shares</FormLabel>
-                  <FormControl>
-                    <Input type="number" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="face_value"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Face Value (per share)</FormLabel>
+                  <FormLabel>Amount</FormLabel>
                   <FormControl>
                     <Input type="number" step="0.01" {...field} />
                   </FormControl>
@@ -281,10 +247,10 @@ export function AddShare({ members, defaultMember, triggerButton }: AddShareProp
             />
             <FormField
               control={form.control}
-              name="purchase_date"
+              name="deposit_date"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
-                  <FormLabel>Purchase Date</FormLabel>
+                  <FormLabel>Deposit Date</FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>
                       <FormControl>
@@ -309,9 +275,6 @@ export function AddShare({ members, defaultMember, triggerButton }: AddShareProp
                         mode="single"
                         selected={field.value}
                         onSelect={field.onChange}
-                        disabled={(date) =>
-                          date > new Date() || date < new Date("1900-01-01")
-                        }
                         initialFocus
                       />
                     </PopoverContent>
@@ -320,9 +283,22 @@ export function AddShare({ members, defaultMember, triggerButton }: AddShareProp
                 </FormItem>
               )}
             />
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Notes (Optional)</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="e.g. Daily collection" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <DialogFooter>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Adding..." : "Add Purchase"}
+                {isSubmitting ? "Adding..." : "Add Deposit"}
               </Button>
             </DialogFooter>
           </form>

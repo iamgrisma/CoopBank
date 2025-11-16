@@ -18,6 +18,10 @@ async function getDashboardData() {
   const { data: shares, error: sharesError } = await supabase
     .from('shares')
     .select('number_of_shares, face_value');
+    
+  const { data: savings, error: savingsError } = await supabase
+    .from('savings')
+    .select('amount');
 
   if (transactionsError) {
     console.error('Error fetching transactions:', transactionsError);
@@ -28,15 +32,20 @@ async function getDashboardData() {
   if (sharesError) {
     console.error('Error fetching shares:', sharesError);
   }
+  if (savingsError) {
+    console.error('Error fetching savings:', savingsError);
+  }
 
   const totalSharesValue = shares ? shares.reduce((acc, share) => acc + (share.number_of_shares * share.face_value), 0) : 0;
+  const totalSavingsValue = savings ? savings.reduce((acc, saving) => acc + saving.amount, 0) : 0;
 
-  // Note: Savings and Loans data is static for now.
-  // We will make these dynamic in future modules.
+
+  // Note: Loans data is static for now.
+  // We will make this dynamic in a future module.
   const overview = {
     members: memberCount ?? 0,
     shares: totalSharesValue,
-    savings: 12234000,
+    savings: totalSavingsValue,
     loans: 8543000,
   }
 

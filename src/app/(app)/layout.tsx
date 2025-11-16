@@ -87,7 +87,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Shares" isActive>
+                <SidebarMenuButton asChild tooltip="Shares">
                   <Link href="/shares">
                     <Landmark />
                     <span>Shares</span>
@@ -95,8 +95,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Savings">
-                  <Link href="#">
+                <SidebarMenuButton asChild tooltip="Savings" isActive>
+                  <Link href="/savings">
                     <Wallet />
                     <span>Savings</span>
                   </Link>

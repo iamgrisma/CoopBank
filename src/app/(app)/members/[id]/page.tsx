@@ -5,9 +5,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
-import { AtSign, Cake, MapPin, Phone } from "lucide-react";
+import { AtSign, Cake, MapPin, Phone, PlusCircle } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AddShare } from "@/components/shares/add-share";
+import { Button } from "@/components/ui/button";
+import { AddSaving } from "@/components/savings/add-saving";
 
 async function getMember(id: string) {
   // The tables are defined in supabase/setup.sql
@@ -39,6 +41,21 @@ async function getShares(memberId: string) {
     return shares;
 }
 
+async function getSavings(memberId: string) {
+    const { data: savings, error } = await supabase
+        .from('savings')
+        .select('*')
+        .eq('member_id', memberId)
+        .order('deposit_date', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching savings:', error);
+        return [];
+    }
+    return savings;
+}
+
+
 const getInitials = (name: string | undefined) => {
   if (!name) return "U";
   const names = name.split(' ');
@@ -59,9 +76,12 @@ const formatCurrency = (amount: number) => {
 export default async function MemberProfilePage({ params }: { params: { id: string } }) {
   const member = await getMember(params.id);
   const shares = await getShares(params.id);
+  const savings = await getSavings(params.id);
 
   const totalSharesValue = shares.reduce((acc, share) => acc + (share.number_of_shares * share.face_value), 0);
   const totalSharesCount = shares.reduce((acc, share) => acc + share.number_of_shares, 0);
+
+  const totalSavings = savings.reduce((acc, saving) => acc + saving.amount, 0);
 
 
   return (
@@ -161,11 +181,42 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                 </TabsContent>
                 <TabsContent value="savings">
                     <Card>
-                        <CardHeader>
-                            <CardTitle>Savings Accounts</CardTitle>
+                        <CardHeader className="flex flex-row items-center">
+                            <div className="grid gap-2">
+                                <CardTitle>Savings Deposits</CardTitle>
+                            </div>
+                            <div className="ml-auto flex items-center gap-2">
+                                <AddSaving
+                                  triggerButton={<Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Deposit</Button>}
+                                  defaultMember={{ id: member.id, name: member.name || '' }}
+                                />
+                            </div>
                         </CardHeader>
                         <CardContent>
-                            <p>Savings account details will appear here once Module 3 is implemented.</p>
+                             <div className="mb-4 grid grid-cols-1 gap-4">
+                                <div className="p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
+                                    <h3 className="text-sm font-medium text-muted-foreground">Total Savings Balance</h3>
+                                    <p className="text-2xl font-bold">{formatCurrency(totalSavings)}</p>
+                                </div>
+                            </div>
+                           <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Deposit Date</TableHead>
+                                        <TableHead>Notes</TableHead>
+                                        <TableHead className="text-right">Amount</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {savings.map(saving => (
+                                        <TableRow key={saving.id}>
+                                            <TableCell>{format(new Date(saving.deposit_date), "do MMM, yyyy")}</TableCell>
+                                            <TableCell>{saving.notes}</TableCell>
+                                            <TableCell className="text-right">{formatCurrency(saving.amount)}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
                         </CardContent>
                     </Card>
                 </TabsContent>
