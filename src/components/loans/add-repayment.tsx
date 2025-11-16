@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -158,7 +159,7 @@ export function AddRepaymentForm({ loanId, memberId, memberName, schedule, onRep
   const { toast } = useToast();
 
   const overdueInstallments = React.useMemo(() => {
-    return schedule.filter(inst => inst.status === 'OVERDUE' || inst.status === 'DUE');
+    return schedule.filter(inst => inst.status === 'OVERDUE' || inst.status === 'DUE' || inst.status === 'PARTIALLY_PAID');
   }, [schedule]);
 
   const totalDue = overdueInstallments.reduce((acc, inst) => acc + inst.totalDue, 0);
@@ -174,30 +175,30 @@ export function AddRepaymentForm({ loanId, memberId, memberName, schedule, onRep
       waive_penalty: false,
     },
   });
-
-  const watchAmount = form.watch("amount_paid");
-  const watchWaivePenalty = form.watch("waive_penalty");
-
-  const allocation = React.useMemo(() => {
-    if (watchAmount > 0) {
-      return allocatePayment(watchAmount, overdueInstallments, watchWaivePenalty);
-    }
-    return null;
-  }, [watchAmount, watchWaivePenalty, overdueInstallments]);
-
+  
   React.useEffect(() => {
     if (open) {
-      const newTotalDue = schedule.filter(inst => inst.status === 'OVERDUE' || inst.status === 'DUE').reduce((acc, inst) => acc + inst.totalDue, 0);
+      const dueNow = schedule
+        .filter(inst => inst.status === 'OVERDUE' || inst.status === 'DUE' || inst.status === 'PARTIALLY_PAID')
+        .reduce((acc, inst) => acc + inst.totalDue, 0);
+
       form.reset({
         loan_id: loanId,
         member_id: memberId,
-        amount_paid: parseFloat(newTotalDue.toFixed(2)) || 0,
+        amount_paid: parseFloat(dueNow.toFixed(2)) || 0,
         payment_date: new Date(),
         notes: "",
         waive_penalty: false,
       });
     }
   }, [open, loanId, memberId, schedule, form]);
+
+  const watchAmount = form.watch("amount_paid");
+  const watchWaivePenalty = form.watch("waive_penalty");
+
+  // This is no longer in a useEffect to prevent re-render loops.
+  // It's calculated on-the-fly during render.
+  const allocation = allocatePayment(watchAmount, overdueInstallments, watchWaivePenalty);
 
   const onSubmit = async (values: RepaymentFormValues) => {
     if (!allocation) {
@@ -288,7 +289,7 @@ export function AddRepaymentForm({ loanId, memberId, memberName, schedule, onRep
                 <div className="p-3 rounded-md border border-dashed text-sm grid gap-2">
                     <h4 className="font-semibold text-base">Payment Allocation</h4>
                      <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Penalty:</span>
+                        <span className="text-muted-foreground">Penalty / Fine:</span>
                         <span className={cn(form.getValues("waive_penalty") && "line-through text-muted-foreground")}>{formatCurrency(allocation.penalty)}</span>
                     </div>
                     <div className="flex justify-between items-center">
@@ -356,3 +357,5 @@ export function AddRepaymentForm({ loanId, memberId, memberName, schedule, onRep
     </Dialog>
   );
 }
+
+    
