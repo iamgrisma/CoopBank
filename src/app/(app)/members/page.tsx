@@ -5,6 +5,7 @@ import { AddMember } from "@/components/members/add-member";
 // This page is now revalidated on-demand when a member is added.
 // See the revalidatePath function in the AddMember component.
 async function getMembers() {
+  // The tables are defined in supabase/setup.sql
   const { data: members, error } = await supabase
     .from('members')
     .select('*')

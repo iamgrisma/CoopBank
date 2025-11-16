@@ -5,6 +5,7 @@ import { FinancialStatements } from "@/components/dashboard/financial-statements
 import { supabase } from "@/lib/supabase-client";
 
 async function getTransactions() {
+  // The tables are defined in supabase/setup.sql
   const { data: transactions, error } = await supabase
     .from('transactions')
     .select('*')
