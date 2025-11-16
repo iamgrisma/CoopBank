@@ -48,7 +48,7 @@ type Member = {
 };
 
 const savingFormSchema = z.object({
-  member_id: z.string({ required_error: "Please select a member." }),
+  member_id: z.string().min(1, { message: "Please select a member." }),
   amount: z.coerce.number().positive({ message: "Amount must be a positive number." }),
   deposit_date: z.date({ required_error: "Deposit date is required." }),
   notes: z.string().optional(),
@@ -108,7 +108,7 @@ export function AddSaving({ members, defaultMember, triggerButton }: AddSavingPr
   const form = useForm<SavingFormValues>({
     resolver: zodResolver(savingFormSchema),
     defaultValues: {
-      member_id: defaultMember?.id || "",
+      member_id: defaultMember?.id,
       amount: 0,
       deposit_date: new Date(),
       notes: "",
@@ -118,7 +118,7 @@ export function AddSaving({ members, defaultMember, triggerButton }: AddSavingPr
   React.useEffect(() => {
     if (open) {
       form.reset({
-        member_id: defaultMember?.id || "",
+        member_id: defaultMember?.id,
         amount: 0,
         deposit_date: new Date(),
         notes: "",
@@ -146,11 +146,20 @@ export function AddSaving({ members, defaultMember, triggerButton }: AddSavingPr
       setOpen(false);
       router.refresh();
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error adding deposit",
-        description: error.message,
-      });
+      // Supabase unique constraint violation error code is '23505'
+      if (error.message.includes("23505")) {
+         toast({
+          variant: "destructive",
+          title: "Duplicate Record",
+          description: "This record seems to be a duplicate. Please check the details.",
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error adding deposit",
+          description: error.message,
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }

@@ -47,7 +47,7 @@ type Member = {
 };
 
 const shareFormSchema = z.object({
-  member_id: z.string({ required_error: "Please select a member." }),
+  member_id: z.string().min(1, { message: "Please select a member." }),
   certificate_number: z.string().min(1, { message: "Certificate number is required." }),
   number_of_shares: z.coerce.number().int().min(1, { message: "Number of shares must be at least 1." }),
   face_value: z.coerce.number().positive({ message: "Face value must be a positive number." }),
@@ -113,7 +113,7 @@ export function AddShare({ members, defaultMember, triggerButton }: AddShareProp
   const form = useForm<ShareFormValues>({
     resolver: zodResolver(shareFormSchema),
     defaultValues: {
-      member_id: defaultMember?.id || "",
+      member_id: defaultMember?.id,
       certificate_number: "",
       number_of_shares: 1,
       face_value: 100,
@@ -125,7 +125,7 @@ export function AddShare({ members, defaultMember, triggerButton }: AddShareProp
   React.useEffect(() => {
     if (open) {
       form.reset({
-        member_id: defaultMember?.id || "",
+        member_id: defaultMember?.id,
         certificate_number: "",
         number_of_shares: 1,
         face_value: 100,
@@ -154,11 +154,19 @@ export function AddShare({ members, defaultMember, triggerButton }: AddShareProp
       setOpen(false);
       router.refresh();
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error adding share purchase",
-        description: error.message,
-      });
+       if (error.message.includes("shares_certificate_number_key")) {
+        toast({
+          variant: "destructive",
+          title: "Duplicate Certificate Number",
+          description: "This certificate number already exists. Please use a unique number.",
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error adding share purchase",
+          description: error.message,
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
