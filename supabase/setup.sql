@@ -1,131 +1,129 @@
+-- Drop tables in reverse order of creation to handle dependencies
+DROP TABLE IF EXISTS transactions;
+DROP TABLE IF EXISTS loans;
+DROP TABLE IF EXISTS loan_schemes;
+DROP TABLE IF EXISTS savings;
+DROP TABLE IF EXISTS shares;
+DROP TABLE IF EXISTS members;
+
 -- Create members table
-create table members (
-  id uuid default gen_random_uuid() primary key,
-  name text not null,
-  email text unique,
-  phone text,
-  address text,
-  join_date date not null,
-  dob date,
-  photo_url text,
-  kyc_document_url text,
-  nominee_name text,
-  nominee_relationship text,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+CREATE TABLE members (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE,
+    phone VARCHAR(255),
+    address TEXT,
+    join_date DATE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    dob DATE,
+    photo_url TEXT,
+    kyc_document_url TEXT,
+    nominee_name VARCHAR(255),
+    nominee_relationship VARCHAR(255)
 );
 
 -- Create shares table
-create table shares (
-    id uuid default gen_random_uuid() primary key,
-    member_id uuid references members(id) not null,
-    certificate_number text not null unique,
-    number_of_shares integer not null,
-    face_value numeric not null,
-    purchase_date date not null,
-    created_at timestamp with time zone default timezone('utc'::text, now()) not null
+CREATE TABLE shares (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    member_id uuid REFERENCES members(id) ON DELETE CASCADE,
+    certificate_number VARCHAR(255) UNIQUE NOT NULL,
+    number_of_shares INT NOT NULL,
+    face_value NUMERIC(10, 2) NOT NULL,
+    purchase_date DATE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create savings table
-create table savings (
-    id uuid default gen_random_uuid() primary key,
-    member_id uuid references members(id) not null,
-    amount numeric not null,
-    deposit_date date not null,
-    notes text,
-    created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-    unique(member_id, deposit_date) -- Assuming one daily saving entry per member per day
+CREATE TABLE savings (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    member_id uuid REFERENCES members(id) ON DELETE CASCADE,
+    amount NUMERIC(10, 2) NOT NULL,
+    deposit_date DATE NOT NULL,
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+ALTER TABLE savings ADD CONSTRAINT unique_member_deposit_date UNIQUE (member_id, deposit_date);
+
 
 -- Create loan_schemes table
-create table loan_schemes (
-    id uuid default gen_random_uuid() primary key,
-    name text not null unique,
-    default_interest_rate numeric not null,
-    max_term_months integer not null,
-    min_term_months integer not null,
-    applicable_to text[] not null, -- e.g., {'members', 'outsiders'}
-    repayment_frequency text not null, -- e.g., 'Monthly', 'Quarterly'
-    processing_fee_percentage numeric,
-    late_payment_penalty numeric,
-    offer_start_date date,
-    offer_end_date date,
-    is_active boolean default true,
-    created_at timestamp with time zone default timezone('utc'::text, now()) not null
+CREATE TABLE loan_schemes (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    default_interest_rate NUMERIC(5, 2) NOT NULL,
+    max_term_months INT NOT NULL,
+    min_term_months INT NOT NULL,
+    applicable_to TEXT[] NOT NULL, -- e.g., {'members', 'outsiders'}
+    repayment_frequency VARCHAR(50) NOT NULL,
+    processing_fee_percentage NUMERIC(5, 2),
+    late_payment_penalty NUMERIC(10, 2),
+    offer_start_date DATE,
+    offer_end_date DATE,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+
 -- Create loans table
-create table loans (
-    id uuid default gen_random_uuid() primary key,
-    member_id uuid references members(id) not null,
-    loan_scheme_id uuid references loan_schemes(id) not null,
-    amount numeric not null,
-    interest_rate numeric not null,
-    loan_term_months integer not null,
-    disbursement_date date not null,
-    status text not null, -- e.g., 'Pending', 'Active', 'Paid Off', 'Rejected'
-    description text,
-    created_at timestamp with time zone default timezone('utc'::text, now()) not null
+CREATE TABLE loans (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    member_id uuid REFERENCES members(id) ON DELETE CASCADE,
+    loan_scheme_id uuid REFERENCES loan_schemes(id),
+    amount NUMERIC(12, 2) NOT NULL,
+    interest_rate NUMERIC(5, 2) NOT NULL,
+    loan_term_months INT NOT NULL,
+    disbursement_date DATE NOT NULL,
+    status VARCHAR(50) NOT NULL, -- e.g., 'Pending', 'Active', 'Paid Off', 'Rejected'
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create transactions table
-create table transactions (
-    id uuid default gen_random_uuid() primary key,
-    member_id uuid references members(id),
-    member_name text,
-    type text not null, -- e.g., 'Share Purchase', 'Savings Deposit', 'Loan Disbursement'
-    amount numeric not null,
-    date date not null,
-    status text not null, -- e.g., 'Completed', 'Pending'
-    description text,
-    created_at timestamp with time zone default timezone('utc'::text, now()) not null
+CREATE TABLE transactions (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    member_id uuid REFERENCES members(id) ON DELETE CASCADE,
+    member_name VARCHAR(255) NOT NULL,
+    type VARCHAR(255) NOT NULL,
+    amount NUMERIC(12, 2) NOT NULL,
+    date DATE NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 
--- Seed initial loan schemes
-insert into loan_schemes 
-(name, default_interest_rate, min_term_months, max_term_months, applicable_to, repayment_frequency, processing_fee_percentage, late_payment_penalty, is_active)
-values
-('Members General Loan', 10.0, 6, 60, '{"members"}', 'Monthly', 1.0, 500, true),
-('Personal Loan', 12.5, 12, 48, '{"members"}', 'Monthly', 1.5, 500, true),
-('House Loan', 8.5, 60, 240, '{"members"}', 'Monthly', 0.75, 1000, true),
-('Education Loan', 9.0, 24, 120, '{"members"}', 'Monthly', 0.5, 250, true),
-('Outsiders Business Loan', 15.0, 12, 36, '{"outsiders"}', 'Quarterly', 2.0, 1500, true);
+-- Pre-populate loan schemes
+INSERT INTO loan_schemes (name, default_interest_rate, min_term_months, max_term_months, applicable_to, repayment_frequency, processing_fee_percentage, late_payment_penalty, is_active)
+VALUES
+  ('General Member Loan', 10.5, 6, 60, '{"members"}', 'Monthly', 1.0, 500, true),
+  ('Personal Loan', 12.0, 12, 72, '{"members"}', 'Monthly', 1.5, 500, true),
+  ('House Loan', 9.5, 60, 240, '{"members"}', 'Monthly', 0.5, 1000, true),
+  ('Education Loan', 8.0, 24, 120, '{"members"}', 'Monthly', 0.25, 250, true),
+  ('Outsiders Business Loan', 15.0, 12, 48, '{"outsiders"}', 'Quarterly', 2.0, 1500, false);
 
--- Enable Row Level Security
-alter table members enable row level security;
-alter table shares enable row level security;
-alter table savings enable row level security;
-alter table loans enable row level security;
-alter table loan_schemes enable row level security;
-alter table transactions enable row level security;
 
--- Create policies for authenticated users
-create policy "Authenticated users can view all data." on members for select to authenticated using (true);
-create policy "Authenticated users can insert members." on members for insert to authenticated with check (true);
-create policy "Authenticated users can update members." on members for update to authenticated using (true);
-create policy "Authenticated users can delete members." on members for delete to authenticated using (true);
+-- Enable Row Level Security (RLS) for all tables
+ALTER TABLE members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE shares ENABLE ROW LEVEL SECURITY;
+ALTER TABLE savings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE loan_schemes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE loans ENABLE ROW LEVEL SECURITY;
+ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 
-create policy "Authenticated users can view all data." on shares for select to authenticated using (true);
-create policy "Authenticated users can insert shares." on shares for insert to authenticated with check (true);
-create policy "Authenticated users can update shares." on shares for update to authenticated using (true);
-create policy "Authenticated users can delete shares." on shares for delete to authenticated using (true);
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Public read access for members" ON members;
+DROP POLICY IF EXISTS "Public full access for shares" ON shares;
+DROP POLICY IF EXISTS "Public full access for savings" ON savings;
+DROP POLICY IF EXISTS "Public full access for loan_schemes" ON loan_schemes;
+DROP POLICY IF EXISTS "Public full access for loans" ON loans;
+DROP POLICY IF EXISTS "Public full access for transactions" ON transactions;
 
-create policy "Authenticated users can view all data." on savings for select to authenticated using (true);
-create policy "Authenticated users can insert savings." on savings for insert to authenticated with check (true);
-create policy "Authenticated users can update savings." on savings for update to authenticated using (true);
-create policy "Authenticated users can delete savings." on savings for delete to authenticated using (true);
 
-create policy "Authenticated users can view all data." on loans for select to authenticated using (true);
-create policy "Authenticated users can insert loans." on loans for insert to authenticated with check (true);
-create policy "Authenticated users can update loans." on loans for update to authenticated using (true);
-create policy "Authenticated users can delete loans." on loans for delete to authenticated using (true);
-
-create policy "Authenticated users can view all data." on loan_schemes for select to authenticated using (true);
-create policy "Authenticated users can insert loan_schemes." on loan_schemes for insert to authenticated with check (true);
-create policy "Authenticated users can update loan_schemes." on loan_schemes for update to authenticated using (true);
-create policy "Authenticated users can delete loan_schemes." on loan_schemes for delete to authenticated using (true);
-
-create policy "Authenticated users can view all data." on transactions for select to authenticated using (true);
-create policy "Authenticated users can insert transactions." on transactions for insert to authenticated with check (true);
-create policy "Authenticated users can update transactions." on transactions for update to authenticated using (true);
-create policy "Authenticated users can delete transactions." on transactions for delete to authenticated using (true);
+-- Create policies to allow public access for authenticated users
+-- This is a starting point. In a real app, you'd have more restrictive policies.
+CREATE POLICY "Public read access for members" ON members FOR SELECT USING (true);
+CREATE POLICY "Allow individual user to update their own info" ON members FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Public full access for shares" ON shares FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public full access for savings" ON savings FOR ALL USING (true) WITH CHECK (true);
+CREATE_POLICY "Public full access for loan_schemes" ON loan_schemes FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public full access for loans" ON loans FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Public full access for transactions" ON transactions FOR ALL USING (true) WITH CHECK (true);
