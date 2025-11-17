@@ -21,7 +21,7 @@ type Transaction = {
 };
 
 // These types are considered credits to the member's main account
-const CREDIT_TYPES = ['Loan Disbursement'];
+const CREDIT_TYPES = ['Loan Disbursement', 'Savings Withdrawal'];
 // These types are considered debits from the member's main account
 const DEBIT_TYPES = ['Loan Repayment', 'Savings Deposit', 'Share Purchase', 'Penal Interest', 'Penalty Income', 'Loan Interest'];
 
@@ -40,9 +40,15 @@ export function AccountStatement({ transactions }: { transactions: Transaction[]
       credit = t.amount;
       runningBalance += t.amount;
     } else {
-        // As a fallback, assume money out if not a known credit type
-        debit = t.amount;
-        runningBalance -= t.amount;
+        // Fallback for unknown types. Assume it's a credit if it's income-related for the bank,
+        // otherwise a debit (money out from member's perspective)
+        if (t.type.toLowerCase().includes('income')) {
+            credit = t.amount;
+            runningBalance += t.amount;
+        } else {
+            debit = t.amount;
+            runningBalance -= t.amount;
+        }
     }
     
     return {
@@ -102,5 +108,3 @@ export function AccountStatement({ transactions }: { transactions: Transaction[]
     </div>
   );
 }
-
-    

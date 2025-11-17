@@ -299,13 +299,13 @@ export function LoanDetailsDialog({ loan, allLoanSchemes, trigger }: LoanDetails
                         <Table>
                         <TableHeader className="sticky top-0 bg-background">
                             <TableRow>
-                            <TableHead>Date</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Principal</TableHead>
-                            <TableHead className="text-right">Interest</TableHead>
-                            <TableHead className="text-right">Penal Interest</TableHead>
-                            <TableHead className="text-right">Fine</TableHead>
-                            <TableHead className="text-right">Total Due</TableHead>
+                                <TableHead>Date</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead className="text-right">Principal</TableHead>
+                                <TableHead className="text-right">Interest</TableHead>
+                                <TableHead className="text-right">Penal Interest</TableHead>
+                                <TableHead className="text-right">Fine</TableHead>
+                                <TableHead className="text-right">Total Due</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
