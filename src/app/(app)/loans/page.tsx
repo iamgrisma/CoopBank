@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { AddLoan } from "@/components/loans/add-loan";
 import { LoansTable } from "@/components/loans/loans-table";
