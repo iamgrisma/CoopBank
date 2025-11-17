@@ -40,6 +40,7 @@ import { supabase } from "@/lib/supabase-client";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
 import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
 type Member = {
   id: string;
@@ -55,6 +56,8 @@ type Member = {
   province_code: string | null;
   district_code: string | null;
   local_level_code: string | null;
+  identification_type: string | null;
+  identification_number: string | null;
 };
 
 const memberFormSchema = z.object({
@@ -69,6 +72,8 @@ const memberFormSchema = z.object({
   province_code: z.string().length(1, "Must be 1 digit").regex(/^\d+$/, "Must be a digit"),
   district_code: z.string().length(2, "Must be 2 digits").regex(/^\d+$/, "Must be digits"),
   local_level_code: z.string().length(2, "Must be 2 digits").regex(/^\d+$/, "Must be digits"),
+  identification_type: z.string().optional(),
+  identification_number: z.string().optional(),
 });
 
 type MemberFormValues = z.infer<typeof memberFormSchema>;
@@ -104,9 +109,11 @@ export function EditMember({ member }: { member: Member }) {
       dob: member.dob ? new Date(member.dob) : null,
       nominee_name: member.nominee_name || "",
       nominee_relationship: member.nominee_relationship || "",
-      province_code: member.province_code || "1",
-      district_code: member.district_code || "01",
+      province_code: member.province_code || "3",
+      district_code: member.district_code || "27",
       local_level_code: member.local_level_code || "01",
+      identification_type: member.identification_type || "CITIZENSHIP",
+      identification_number: member.identification_number || "",
     },
   });
 
@@ -173,32 +180,34 @@ export function EditMember({ member }: { member: Member }) {
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Phone</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+                <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                        <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Phone</FormLabel>
+                    <FormControl>
+                        <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            </div>
             <FormField
               control={form.control}
               name="address"
@@ -253,6 +262,7 @@ export function EditMember({ member }: { member: Member }) {
                   )}
                 />
             </div>
+            <div className="grid grid-cols-2 gap-4">
              <FormField
               control={form.control}
               name="join_date"
@@ -262,29 +272,14 @@ export function EditMember({ member }: { member: Member }) {
                   <Popover>
                     <PopoverTrigger asChild>
                       <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "PPP")
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
+                        <Button variant="outline" className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                          {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                           <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        initialFocus
-                      />
+                      <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus/>
                     </PopoverContent>
                   </Popover>
                   <FormMessage />
@@ -300,61 +295,88 @@ export function EditMember({ member }: { member: Member }) {
                   <Popover>
                     <PopoverTrigger asChild>
                       <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "PPP")
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
+                        <Button variant="outline" className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                          {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                           <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        initialFocus
-                      />
+                      <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus/>
                     </PopoverContent>
                   </Popover>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="nominee_name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nominee Name</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="nominee_relationship"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nominee Relationship</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            </div>
+             <div className="grid grid-cols-2 gap-4">
+               <FormField
+                control={form.control}
+                name="identification_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>ID Type</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select ID Type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="CITIZENSHIP">Citizenship</SelectItem>
+                        <SelectItem value="NATIONAL_ID">National ID</SelectItem>
+                        <SelectItem value="PASSPORT">Passport</SelectItem>
+                        <SelectItem value="LICENSE">License</SelectItem>
+                        <SelectItem value="PAN">PAN</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="identification_number"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>ID Number</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter ID number" {...field} value={field.value || ""} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+                <FormField
+                control={form.control}
+                name="nominee_name"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Nominee Name</FormLabel>
+                    <FormControl>
+                        <Input {...field} value={field.value || ""} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="nominee_relationship"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Nominee Relationship</FormLabel>
+                    <FormControl>
+                        <Input {...field} value={field.value || ""} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            </div>
             <DialogFooter>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? "Saving..." : "Save Changes"}
@@ -366,3 +388,5 @@ export function EditMember({ member }: { member: Member }) {
     </Dialog>
   );
 }
+
+    

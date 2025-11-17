@@ -28,6 +28,8 @@ type Member = {
   province_code: string | null;
   district_code: string | null;
   local_level_code: string | null;
+  identification_type: string | null;
+  identification_number: string | null;
 };
 
 const getInitials = (name: string | undefined) => {
@@ -97,3 +99,5 @@ export function MembersTable({ members }: { members: Member[] }) {
     </div>
   )
 }
+
+    
