@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
-import { AtSign, Cake, MapPin, Phone, PlusCircle, TrendingUp, UserCheck } from "lucide-react";
+import { AtSign, Cake, HandCoins, MapPin, Phone, PlusCircle, Scale, TrendingDown, TrendingUp, UserCheck, Wallet } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AddShare } from "@/components/shares/add-share";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { calculateAccruedInterestForAllSavings } from "@/lib/saving-utils";
 import { formatCurrency } from "@/lib/utils";
 import { AccountStatement } from "@/components/members/account-statement";
+import { generateDynamicAmortizationSchedule, Repayment, RepaymentFrequency } from "@/lib/loan-utils";
 
 async function getMember(supabase: SupabaseClient, id: string) {
   const { data: member, error } = await supabase
@@ -78,8 +79,8 @@ async function getLoans(supabase: SupabaseClient, memberId: string) {
     .from('loans')
     .select(`
       *,
-      loan_schemes (name),
-      members (name)
+      loan_schemes (name, repayment_frequency, grace_period_months),
+      members (id, name)
     `)
     .eq('member_id', memberId)
     .order('disbursement_date', { ascending: false });
@@ -89,6 +90,20 @@ async function getLoans(supabase: SupabaseClient, memberId: string) {
     return [];
   }
   return data;
+}
+
+async function getRepayments(supabase: SupabaseClient, loanIds: string[]) {
+    if (loanIds.length === 0) return [];
+    const { data, error } = await supabase
+        .from('loan_repayments')
+        .select('*')
+        .in('loan_id', loanIds);
+    
+    if (error) {
+        console.error('Error fetching repayments:', error);
+        return [];
+    }
+    return data;
 }
 
 async function getLoanSchemes(supabase: SupabaseClient) {
@@ -168,12 +183,37 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
     getTransactions(supabase, params.id)
   ]);
 
+  const loanIds = loans.map(l => l.id);
+  const allRepayments = await getRepayments(supabase, loanIds);
+
   const totalSharesValue = shares.reduce((acc, share) => acc + (share.number_of_shares * share.face_value), 0);
   const totalSharesCount = shares.reduce((acc, share) => acc + share.number_of_shares, 0);
 
   const totalSavings = savings.reduce((acc, saving) => acc + saving.amount, 0);
-  const totalLoanAmount = loans.reduce((acc, loan) => acc + loan.amount, 0);
   
+  const totalLoanAmount = loans.reduce((acc, loan) => acc + loan.amount, 0);
+  const totalRepaidAmount = allRepayments.reduce((acc, p) => acc + p.amount_paid, 0);
+  const totalPrincipalRepaid = allRepayments.reduce((acc, p) => acc + p.principal_paid, 0);
+  const remainingPrincipal = totalLoanAmount - totalPrincipalRepaid;
+  
+  let totalOverdue = 0;
+  for (const loan of loans.filter(l => l.status === 'Active')) {
+    const loanRepayments = allRepayments.filter(r => r.loan_id === loan.id);
+    const schedule = generateDynamicAmortizationSchedule(
+        loan.amount,
+        loan.interest_rate,
+        loan.loan_term_months,
+        new Date(loan.disbursement_date),
+        loanRepayments,
+        loan.repayment_frequency as RepaymentFrequency,
+        loan.grace_period_months
+    );
+    const overdueForLoan = schedule
+        .filter(entry => entry.status === 'OVERDUE' || entry.status === 'DUE')
+        .reduce((sum, entry) => sum + entry.totalDue, 0);
+    totalOverdue += overdueForLoan;
+  }
+
   const totalAccruedInterest = calculateAccruedInterestForAllSavings(savings);
 
   const savingsByScheme = savings.reduce((acc, saving) => {
@@ -364,11 +404,43 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <div className="mb-4 grid grid-cols-1 gap-4">
-                                <div className="p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
-                                    <h3 className="text-sm font-medium text-muted-foreground">Total Loan Amount</h3>
-                                    <p className="text-2xl font-bold">{formatCurrency(totalLoanAmount)}</p>
-                                </div>
+                            <div className="mb-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                        <CardTitle className="text-sm font-medium">Total Loaned</CardTitle>
+                                        <HandCoins className="h-4 w-4 text-muted-foreground" />
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-2xl font-bold">{formatCurrency(totalLoanAmount)}</div>
+                                    </CardContent>
+                                </Card>
+                                <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                        <CardTitle className="text-sm font-medium">Total Repaid</CardTitle>
+                                        <Wallet className="h-4 w-4 text-muted-foreground" />
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-2xl font-bold text-green-600">{formatCurrency(totalRepaidAmount)}</div>
+                                    </CardContent>
+                                </Card>
+                                 <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                        <CardTitle className="text-sm font-medium">Remaining Principal</CardTitle>
+                                        <Scale className="h-4 w-4 text-muted-foreground" />
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-2xl font-bold">{formatCurrency(remainingPrincipal)}</div>
+                                    </CardContent>
+                                </Card>
+                                <Card className={totalOverdue > 0 ? "bg-destructive/10 border-destructive/50" : ""}>
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                        <CardTitle className="text-sm font-medium">Total Overdue</CardTitle>
+                                        <TrendingDown className="h-4 w-4 text-muted-foreground" />
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className={`text-2xl font-bold ${totalOverdue > 0 ? 'text-destructive' : ''}`}>{formatCurrency(totalOverdue)}</div>
+                                    </CardContent>
+                                </Card>
                             </div>
                            <Table>
                                 <TableHeader>
@@ -390,7 +462,7 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                                             <TableCell><Badge variant="outline">{loan.status}</Badge></TableCell>
                                             <TableCell className="text-right">{formatCurrency(loan.amount)}</TableCell>
                                             <TableCell className="text-right">
-                                                <LoanDetailsDialog loan={loan} />
+                                                <LoanDetailsDialog loan={{...loan, members: {id: member.id, name: member.name!}}} />
                                             </TableCell>
                                         </TableRow>
                                     ))}
