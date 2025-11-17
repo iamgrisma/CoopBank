@@ -139,100 +139,67 @@ export const generateDynamicAmortizationSchedule = (
     penalInterestPaid: 0,
   }));
 
-  // 2. Apply all historical payments to the schedule
   const sortedRepayments = [...repayments].sort((a, b) => new Date(a.payment_date).getTime() - new Date(b.payment_date).getTime());
-
-  // This is a temporary copy of the schedule to allocate payments against.
-  const tempScheduleForAllocation = JSON.parse(JSON.stringify(schedule));
-
-  for (const repayment of sortedRepayments) {
-    const dueInstallments = tempScheduleForAllocation.filter((inst: AmortizationEntry) => 
-        new Date(inst.paymentDate) < new Date(repayment.payment_date) && (inst.principal > inst.principalPaid || inst.interest > inst.interestPaid)
-    ).sort((a:AmortizationEntry, b:AmortizationEntry) => new Date(a.paymentDate).getTime() - new Date(b.paymentDate).getTime());
-
-    let remainingRepayment = repayment.amount_paid;
-
-    for (const inst of dueInstallments) {
-        if (remainingRepayment <= 0) break;
-        // In this loop, we are just applying the already broken-down payment amounts from the DB
-        // to the correct installments in our live schedule.
-        const originalInstallment = schedule.find(s => s.month === inst.month)!;
-        
-        // This is a simplified distribution for reflecting history.
-        // The real-time allocation happens in `allocatePayment`.
-        // Here, we just need to ensure paid amounts from the DB reduce the balances in the schedule.
-        
-        let principalToDistribute = repayment.principal_paid;
-        let interestToDistribute = repayment.interest_paid;
-        let penalToDistribute = repayment.penal_interest_paid;
-        let penaltyToDistribute = repayment.penalty_paid;
-
-         // This logic needs to be smarter. Let's rebuild how historical payments are applied.
-    }
-  }
   
-  // A better way to apply historical payments:
-  // Reset all paid amounts first.
-  for(const entry of schedule) {
-    entry.principalPaid = 0;
-    entry.interestPaid = 0;
-    entry.penalInterestPaid = 0;
-    entry.penaltyPaid = 0;
-  }
+  // Apply historical payments
+  for(const repayment of sortedRepayments) {
+    const paymentDate = new Date(repayment.payment_date);
 
-  for (const repayment of sortedRepayments) {
-    // For each payment, run the allocation logic against the state of the schedule *at that time*
+    // Run the due calculation as it would have been on the day of the payment
+    const scheduleOnPaymentDate = calculateCurrentDues(schedule, annualRate, paymentDate);
     
-    // First, calculate penalties on the schedule as it would have been on the payment day.
-    const scheduleOnPaymentDate = calculateCurrentDues(schedule, new Date(repayment.payment_date));
-    const dueInstallments = scheduleOnPaymentDate.filter(inst => inst.status === 'OVERDUE' || inst.status === 'DUE' || inst.status === 'PARTIALLY_PAID');
-    
-    // Allocate the payment based on the state of dues on that day.
-    const allocation = allocatePayment(repayment.amount_paid, dueInstallments, false); // Assume fine was not waived for historical payments
+    const allocation = allocatePayment(
+        repayment.amount_paid, 
+        scheduleOnPaymentDate.filter(i => i.status === 'OVERDUE' || i.status === 'DUE' || i.status === 'PARTIALLY_PAID'), 
+        repayment.penalty_paid === 0 && repayment.amount_paid > 0 // A simple heuristic for waiver
+    );
 
-    // Now distribute this allocation back into the main schedule
-    let { principal, interest, penalInterest, fine } = allocation;
+    // Distribute this historical allocation back into the main schedule
+    let { principal: pToPay, interest: iToPay, penalInterest: piToPay, fine: fToPay } = allocation;
 
     for (const inst of schedule.sort((a,b) => a.month - b.month)) {
-        if (principal <= 0 && interest <= 0 && penalInterest <= 0 && fine <= 0) break;
-        
-        const fineDue = inst.penalty - inst.penaltyPaid;
-        if(fine > 0 && fineDue > 0) {
-            const paid = Math.min(fine, fineDue);
-            inst.penaltyPaid += paid;
-            fine -= paid;
-        }
-        const penalDue = inst.penalInterest - inst.penalInterestPaid;
-         if(penalInterest > 0 && penalDue > 0) {
-            const paid = Math.min(penalInterest, penalDue);
-            inst.penalInterestPaid += paid;
-            penalInterest -= paid;
-        }
-        const interestDue = inst.interest - inst.interestPaid;
-        if(interest > 0 && interestDue > 0) {
-            const paid = Math.min(interest, interestDue);
-            inst.interestPaid += paid;
-            interest -= paid;
-        }
-        const principalDue = inst.principal - inst.principalPaid;
-        if(principal > 0 && principalDue > 0) {
-            const paid = Math.min(principal, principalDue);
-            inst.principalPaid += paid;
-            principal -= paid;
-        }
+      if (pToPay <= 0 && iToPay <= 0 && piToPay <= 0 && fToPay <= 0) break;
+
+      const fineDue = inst.penalty - inst.penaltyPaid;
+      if (fToPay > 0 && fineDue > 0) {
+          const paid = Math.min(fToPay, fineDue);
+          inst.penaltyPaid += paid;
+          fToPay -= paid;
+      }
+      
+      const penalInterestDue = inst.penalInterest - inst.penalInterestPaid;
+      if (piToPay > 0 && penalInterestDue > 0) {
+          const paid = Math.min(piToPay, penalInterestDue);
+          inst.penalInterestPaid += paid;
+          piToPay -= paid;
+      }
+
+      const interestDue = inst.interest - inst.interestPaid;
+      if (iToPay > 0 && interestDue > 0) {
+          const paid = Math.min(iToPay, interestDue);
+          inst.interestPaid += paid;
+          iToPay -= paid;
+      }
+
+      const principalDue = inst.principal - inst.principalPaid;
+      if (pToPay > 0 && principalDue > 0) {
+          const paid = Math.min(pToPay, principalDue);
+          inst.principalPaid += paid;
+          pToPay -= paid;
+      }
     }
   }
 
 
   // 3. Finally, update the current status, penalties, and totalDue for each installment based on today's date.
-  const finalSchedule = calculateCurrentDues(schedule, new Date());
+  const finalSchedule = calculateCurrentDues(schedule, annualRate, new Date());
 
 
   return finalSchedule;
 };
 
 // Helper function to calculate dues, penalties, and status for a given date.
-const calculateCurrentDues = (schedule: AmortizationEntry[], asOfDate: Date): AmortizationEntry[] => {
+const calculateCurrentDues = (schedule: AmortizationEntry[], annualRate: number, asOfDate: Date): AmortizationEntry[] => {
     const today = asOfDate;
     today.setHours(0, 0, 0, 0);
 
@@ -240,11 +207,6 @@ const calculateCurrentDues = (schedule: AmortizationEntry[], asOfDate: Date): Am
         const dueDate = new Date(entry.paymentDate);
         dueDate.setHours(0, 0, 0, 0);
         
-        // Reset dynamic calculations for this run
-        entry.daysOverdue = 0;
-        entry.penalInterest = 0;
-        entry.penalty = 0;
-
         const outstandingPrincipal = Math.max(0, entry.principal - entry.principalPaid);
         const outstandingInterest = Math.max(0, entry.interest - entry.interestPaid);
         const isOverdue = isPast(dueDate) && !isToday(dueDate);
@@ -253,15 +215,18 @@ const calculateCurrentDues = (schedule: AmortizationEntry[], asOfDate: Date): Am
         const outstandingEMI = outstandingPrincipal + outstandingInterest;
         
         // Calculate Penalties and Fines only if it's overdue and there's a balance on the original EMI
+        entry.daysOverdue = 0;
+        entry.penalInterest = 0;
+        entry.penalty = 0;
+
         if (isOverdue && outstandingEMI > 0) {
             entry.daysOverdue = differenceInDays(today, dueDate);
             if (entry.daysOverdue > 0) {
-                const annualRate = (entry.interest / entry.beginningBalance) * 12 * 100;
-                // Penal interest is on the outstanding EMI amount
+                // Penal interest is on the outstanding EMI amount at the main loan interest rate
                 const dailyMainRate = annualRate / 365 / 100;
                 entry.penalInterest = outstandingEMI * dailyMainRate * entry.daysOverdue;
                 
-                // Fine is also on the outstanding EMI amount
+                // Fine is also on the outstanding EMI amount at a separate penalty rate
                 const dailyPenaltyRate = PENALTY_RATE_PA / 365;
                 entry.penalty = outstandingEMI * dailyPenaltyRate * entry.daysOverdue;
             }
@@ -320,7 +285,7 @@ export const allocatePayment = (
     paymentAmount: number, 
     dueInstallments: AmortizationEntry[],
     waiveFine: boolean
-) => {
+): { principal: number; interest: number; penalInterest: number; fine: number; savings: number; } => {
     let remainingAmount = paymentAmount;
     const allocation = {
         principal: 0,
@@ -330,57 +295,52 @@ export const allocatePayment = (
         savings: 0,
     };
 
-    const applyPayment = (amountToPay: number, due: number): [number, number] => {
-        const paid = Math.min(amountToPay, due);
-        return [paid, amountToPay - paid];
-    };
+    const sortedDues = [...dueInstallments].sort((a,b) => a.month - b.month);
 
-    // 1. Sort installments by date, oldest first, to ensure oldest dues are paid first.
-    const sortedDues = [...dueInstallments].sort((a,b) => a.paymentDate.getTime() - b.paymentDate.getTime());
-
-    // 2. Loop through each sorted installment and clear dues according to the hierarchy
     for (const installment of sortedDues) {
         if (remainingAmount <= 0) break;
 
-        let paid;
-
-        // A. Pay Fine (if not waived)
-        const fineDue = installment.penalty - installment.penaltyPaid;
-        if (!waiveFine && fineDue > 0) {
-            [paid, remainingAmount] = applyPayment(remainingAmount, fineDue);
-            allocation.fine += paid;
+        // 1. Pay Fine (if not waived)
+        if (!waiveFine) {
+            const fineDue = installment.penalty - installment.penaltyPaid;
+            if (fineDue > 0) {
+                const amountToPay = Math.min(remainingAmount, fineDue);
+                allocation.fine += amountToPay;
+                remainingAmount -= amountToPay;
+                if (remainingAmount <= 0) continue;
+            }
         }
-        if (remainingAmount <= 0) continue;
         
-        // B. Pay Penal Interest
+        // 2. Pay Penal Interest
         const penalInterestDue = installment.penalInterest - installment.penalInterestPaid;
         if (penalInterestDue > 0) {
-            [paid, remainingAmount] = applyPayment(remainingAmount, penalInterestDue);
-            allocation.penalInterest += paid;
+            const amountToPay = Math.min(remainingAmount, penalInterestDue);
+            allocation.penalInterest += amountToPay;
+            remainingAmount -= amountToPay;
+            if (remainingAmount <= 0) continue;
         }
-        if (remainingAmount <= 0) continue;
 
-        // C. Pay Regular Interest
+        // 3. Pay Regular Interest
         const interestDue = installment.interest - installment.interestPaid;
         if (interestDue > 0) {
-            [paid, remainingAmount] = applyPayment(remainingAmount, interestDue);
-            allocation.interest += paid;
+            const amountToPay = Math.min(remainingAmount, interestDue);
+            allocation.interest += amountToPay;
+            remainingAmount -= amountToPay;
+            if (remainingAmount <= 0) continue;
         }
-        if (remainingAmount <= 0) continue;
 
-        // D. Pay Principal
+        // 4. Pay Principal
         const principalDue = installment.principal - installment.principalPaid;
         if (principalDue > 0) {
-            [paid, remainingAmount] = applyPayment(remainingAmount, principalDue);
-            allocation.principal += paid;
+            const amountToPay = Math.min(remainingAmount, principalDue);
+            allocation.principal += amountToPay;
+            remainingAmount -= amountToPay;
         }
     }
 
-    // 3. Any leftover amount goes to savings
     if (remainingAmount > 0) {
         allocation.savings = remainingAmount;
     }
 
     return allocation;
 };
-
