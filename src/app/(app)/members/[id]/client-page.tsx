@@ -17,6 +17,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { calculateAccruedInterestForAllSavings } from "@/lib/saving-utils";
 import { formatCurrency } from "@/lib/utils";
 import { AccountStatement } from "@/components/members/account-statement";
+import { generateDynamicAmortizationSchedule, Repayment } from "@/lib/loan-utils";
+import { useState, useEffect } from 'react';
 
 type Member = {
   id: string;
@@ -31,8 +33,7 @@ type Member = {
   photo_url: string | null;
   identification_type: string | null;
   identification_number: string | null;
-  kyc_document_url: string | null;
-  account_number: string | null;
+  identification_issue_date: string | null;
 };
 type Share = any;
 type Saving = any;
@@ -49,6 +50,7 @@ interface MemberProfileClientPageProps {
   loanSchemes: LoanScheme[];
   savingSchemes: SavingScheme[];
   transactions: Transaction[];
+  repayments: Repayment[];
 }
 
 const getInitials = (name: string | undefined | null) => {
@@ -105,7 +107,50 @@ export default function MemberProfileClientPage({
   loanSchemes,
   savingSchemes,
   transactions,
+  repayments,
 }: MemberProfileClientPageProps) {
+
+  const [loanSummaries, setLoanSummaries] = useState({
+      totalRepaid: 0,
+      remainingPrincipal: 0,
+      totalOverdue: 0
+  });
+  
+  useEffect(() => {
+    let totalRepaid = 0;
+    let remainingPrincipal = 0;
+    let totalOverdue = 0;
+
+    loans.forEach(loan => {
+        const loanRepayments = repayments.filter(r => r.loan_id === loan.id);
+        totalRepaid += loanRepayments.reduce((sum, r) => sum + r.amount_paid, 0);
+
+        const principalPaid = loanRepayments.reduce((sum, r) => sum + r.principal_paid, 0);
+        remainingPrincipal += (loan.amount - principalPaid);
+
+        if (loan.status === 'Active') {
+            const schedule = generateDynamicAmortizationSchedule(
+                loan.amount,
+                loan.interest_rate,
+                loan.loan_term_months,
+                new Date(loan.disbursement_date),
+                loanRepayments,
+                loan.repayment_frequency || 'Monthly',
+                loan.grace_period_months || 0
+            );
+            const overdueAmount = schedule
+                .filter(inst => inst.status === 'OVERDUE' || inst.status === 'DUE' || inst.status === 'PARTIALLY_PAID')
+                .reduce((sum, inst) => sum + inst.totalDue, 0);
+            totalOverdue += overdueAmount;
+        }
+    });
+
+    setLoanSummaries({
+        totalRepaid,
+        remainingPrincipal,
+        totalOverdue
+    });
+  }, [loans, repayments]);
   
   const activeLoans = loans.filter(l => !['Paid Off', 'Rejected', 'Restructured'].includes(l.status));
   
@@ -116,9 +161,6 @@ export default function MemberProfileClientPage({
   
   const totalLoanAmount = activeLoans.reduce((acc, loan) => acc + loan.amount, 0);
   
-  // NOTE: More complex calculations like total repaid, overdue, etc.,
-  // are now performed on the client-side within the LoanDetailsDialog component
-  // to avoid mixing server/client logic in utility files.
   const totalAccruedInterest = calculateAccruedInterestForAllSavings(savings);
 
   const savingsByScheme = savings.reduce((acc, saving) => {
@@ -298,17 +340,19 @@ export default function MemberProfileClientPage({
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                             <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                 <StatCard title="Total Loaned" value={formatCurrency(totalLoanAmount)} icon={HandCoins} />
-                                <StatCard title="Total Repaid" value="N/A" icon={Wallet} />
-                                <StatCard title="Remaining Principal" value="N/A" icon={Scale} />
-                                <Card>
+                                <StatCard title="Total Repaid" value={formatCurrency(loanSummaries.totalRepaid)} icon={Wallet} />
+                                <StatCard title="Remaining Principal" value={formatCurrency(loanSummaries.remainingPrincipal)} icon={Scale} />
+                                <Card className={loanSummaries.totalOverdue > 0 ? "border-destructive" : ""}>
                                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                         <CardTitle className="text-sm font-medium">Total Overdue</CardTitle>
                                         <TrendingDown className="h-4 w-4 text-muted-foreground" />
                                     </CardHeader>
                                     <CardContent>
-                                        <div className='text-2xl font-bold'>N/A</div>
+                                        <div className={cn('text-2xl font-bold', loanSummaries.totalOverdue > 0 && "text-destructive")}>
+                                            {formatCurrency(loanSummaries.totalOverdue)}
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </div>

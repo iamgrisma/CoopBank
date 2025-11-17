@@ -62,6 +62,7 @@ export default function MemberProfilePage() {
                 loanSchemesRes,
                 savingSchemesRes,
                 transactionsRes,
+                repaymentsRes,
             ] = await Promise.all([
                 supabase.from('shares').select('*').eq('member_id', id).order('purchase_date', { ascending: false }),
                 supabase.from('savings').select('*, saving_schemes (id, name, type, interest_rate)').eq('member_id', id).order('deposit_date', { ascending: false }),
@@ -69,6 +70,7 @@ export default function MemberProfilePage() {
                 supabase.from('loan_schemes').select('*').order('name', { ascending: true }),
                 supabase.from('saving_schemes').select('*').order('name', { ascending: true }),
                 supabase.from('transactions').select('*').eq('member_id', id).order('date', { ascending: true }),
+                supabase.from('loan_repayments').select('*').eq('member_id', id).order('payment_date', { ascending: true }),
             ]);
 
             setData({
@@ -79,6 +81,7 @@ export default function MemberProfilePage() {
                 loanSchemes: loanSchemesRes.data || [],
                 savingSchemes: savingSchemesRes.data || [],
                 transactions: transactionsRes.data || [],
+                repayments: repaymentsRes.data || [],
             });
             setLoading(false);
         }
