@@ -20,6 +20,10 @@ type Saving = {
     id: string;
     name: string;
   } | null;
+  saving_schemes: {
+    id: string;
+    name: string;
+  } | null;
 };
 
 const formatCurrency = (amount: number) => {
@@ -37,6 +41,7 @@ export function SavingsTable({ savings }: { savings: Saving[] }) {
         <TableHeader>
           <TableRow>
             <TableHead>Member</TableHead>
+            <TableHead>Scheme</TableHead>
             <TableHead>Deposit Date</TableHead>
             <TableHead>Notes</TableHead>
             <TableHead className="text-right">Amount</TableHead>
@@ -45,7 +50,7 @@ export function SavingsTable({ savings }: { savings: Saving[] }) {
         <TableBody>
           {savings.length === 0 ? (
             <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center">
+                <TableCell colSpan={5} className="h-24 text-center">
                     No savings deposits found.
                 </TableCell>
             </TableRow>
@@ -61,6 +66,7 @@ export function SavingsTable({ savings }: { savings: Saving[] }) {
                     <span className="text-muted-foreground">N/A</span>
                   )}
                 </TableCell>
+                <TableCell>{saving.saving_schemes?.name}</TableCell>
                 <TableCell>
                   {format(new Date(saving.deposit_date), "yyyy-MM-dd")}
                 </TableCell>

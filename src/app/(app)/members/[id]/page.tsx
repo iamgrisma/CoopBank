@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
-import { AtSign, Cake, MapPin, Phone, PlusCircle, MoreHorizontal } from "lucide-react";
+import { AtSign, Cake, MapPin, Phone, PlusCircle } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AddShare } from "@/components/shares/add-share";
 import { Button } from "@/components/ui/button";
@@ -13,10 +13,10 @@ import { AddLoan } from "@/components/loans/add-loan";
 import { Badge } from "@/components/ui/badge";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { LoanDetailsDialog } from "@/components/loans/loan-details-dialog";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 async function getMember(id: string) {
   const supabase = createSupabaseServerClient();
-  // The tables are defined in supabase/setup.sql
   const { data: member, error } = await supabase
     .from("members")
     .select("*")
@@ -50,7 +50,14 @@ async function getSavings(memberId: string) {
     const supabase = createSupabaseServerClient();
     const { data: savings, error } = await supabase
         .from('savings')
-        .select('*')
+        .select(`
+            *,
+            saving_schemes (
+                id,
+                name,
+                type
+            )
+        `)
         .eq('member_id', memberId)
         .order('deposit_date', { ascending: false });
 
@@ -94,6 +101,20 @@ async function getLoanSchemes() {
     return data;
 }
 
+async function getSavingSchemes() {
+    const supabase = createSupabaseServerClient();
+    const { data, error } = await supabase
+        .from('saving_schemes')
+        .select('*')
+        .order('name', { ascending: true });
+
+    if (error) {
+        console.error('Error fetching saving schemes:', error);
+        return [];
+    }
+    return data;
+}
+
 
 const getInitials = (name: string | undefined) => {
   if (!name) return "U";
@@ -118,13 +139,22 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
   const savings = await getSavings(params.id);
   const loans = await getLoans(params.id);
   const loanSchemes = await getLoanSchemes();
+  const savingSchemes = await getSavingSchemes();
 
   const totalSharesValue = shares.reduce((acc, share) => acc + (share.number_of_shares * share.face_value), 0);
   const totalSharesCount = shares.reduce((acc, share) => acc + share.number_of_shares, 0);
 
   const totalSavings = savings.reduce((acc, saving) => acc + saving.amount, 0);
-  
   const totalLoanAmount = loans.reduce((acc, loan) => acc + loan.amount, 0);
+
+  const savingsByScheme = savings.reduce((acc, saving) => {
+    const schemeName = saving.saving_schemes?.name || 'Uncategorized';
+    if (!acc[schemeName]) {
+        acc[schemeName] = [];
+    }
+    acc[schemeName].push(saving);
+    return acc;
+  }, {} as Record<string, typeof savings>);
 
 
   return (
@@ -226,10 +256,11 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                     <Card>
                         <CardHeader className="flex flex-row items-center">
                             <div className="grid gap-2">
-                                <CardTitle>Savings Deposits</CardTitle>
+                                <CardTitle>Savings Accounts</CardTitle>
                             </div>
                             <div className="ml-auto flex items-center gap-2">
                                 <AddSaving
+                                  savingSchemes={savingSchemes}
                                   triggerButton={<Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Deposit</Button>}
                                   defaultMember={{ id: member.id, name: member.name || '' }}
                                 />
@@ -242,24 +273,33 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                                     <p className="text-2xl font-bold">{formatCurrency(totalSavings)}</p>
                                 </div>
                             </div>
-                           <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Deposit Date</TableHead>
-                                        <TableHead>Notes</TableHead>
-                                        <TableHead className="text-right">Amount</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {savings.map(saving => (
-                                        <TableRow key={saving.id}>
-                                            <TableCell>{format(new Date(saving.deposit_date), "do MMM, yyyy")}</TableCell>
-                                            <TableCell>{saving.notes}</TableCell>
-                                            <TableCell className="text-right">{formatCurrency(saving.amount)}</TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
+                           <Accordion type="multiple" className="w-full" defaultValue={Object.keys(savingsByScheme)}>
+                                {Object.entries(savingsByScheme).map(([schemeName, deposits]) => (
+                                    <AccordionItem value={schemeName} key={schemeName}>
+                                        <AccordionTrigger className="text-lg font-semibold">{schemeName}</AccordionTrigger>
+                                        <AccordionContent>
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>Deposit Date</TableHead>
+                                                        <TableHead>Notes</TableHead>
+                                                        <TableHead className="text-right">Amount</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {deposits.map(saving => (
+                                                        <TableRow key={saving.id}>
+                                                            <TableCell>{format(new Date(saving.deposit_date), "do MMM, yyyy")}</TableCell>
+                                                            <TableCell>{saving.notes}</TableCell>
+                                                            <TableCell className="text-right">{formatCurrency(saving.amount)}</TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                ))}
+                            </Accordion>
                         </CardContent>
                     </Card>
                 </TabsContent>

@@ -13,6 +13,10 @@ async function getSavings() {
       members (
         id,
         name
+      ),
+      saving_schemes (
+        id,
+        name
       )
     `)
     .order('deposit_date', { ascending: false });
@@ -38,17 +42,33 @@ async function getMembers() {
   return members;
 }
 
+async function getSavingSchemes() {
+    const supabase = createSupabaseServerClient();
+    const { data, error } = await supabase
+        .from('saving_schemes')
+        .select('*')
+        .order('name', { ascending: true });
+    
+    if (error) {
+        console.error('Error fetching saving schemes:', error);
+        return [];
+    }
+    return data;
+}
+
 export default async function SavingsPage() {
   const savings = await getSavings();
   const members = await getMembers();
+  const savingSchemes = await getSavingSchemes();
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
       <div className="flex items-center">
-        <h1 className="font-semibold text-lg md:text-2xl">Daily Savings</h1>
+        <h1 className="font-semibold text-lg md:text-2xl">All Saving Deposits</h1>
         <div className="ml-auto">
           <AddSaving 
             members={members}
+            savingSchemes={savingSchemes}
             triggerButton={
               <Button>
                 <PlusCircle className="mr-2 h-4 w-4" />

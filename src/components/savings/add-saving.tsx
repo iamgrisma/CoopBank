@@ -40,6 +40,13 @@ import {
   CommandItem,
   CommandList
 } from "@/components/ui/command";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import { Textarea } from "../ui/textarea";
 
 type Member = {
@@ -47,8 +54,14 @@ type Member = {
   name: string;
 };
 
+type SavingScheme = {
+    id: string;
+    name: string;
+};
+
 const savingFormSchema = z.object({
   member_id: z.string().min(1, { message: "Please select a member." }),
+  saving_scheme_id: z.string().min(1, { message: "Please select a saving scheme." }),
   amount: z.coerce.number().positive({ message: "Amount must be a positive number." }),
   deposit_date: z.date({ required_error: "Deposit date is required." }),
   notes: z.string().optional(),
@@ -62,6 +75,7 @@ async function addSavingToDb(saving: Omit<SavingFormValues, 'deposit_date'> & { 
     .from("savings")
     .insert({
       member_id: saving.member_id,
+      saving_scheme_id: saving.saving_scheme_id,
       amount: saving.amount,
       deposit_date: saving.deposit_date,
       notes: saving.notes,
@@ -82,7 +96,7 @@ async function addSavingToDb(saving: Omit<SavingFormValues, 'deposit_date'> & { 
       amount: saving.amount,
       date: saving.deposit_date,
       status: 'Completed',
-      description: `Daily saving deposit. ${saving.notes || ''}`
+      description: `Saving deposit. ${saving.notes || ''}`
     });
 
   if (transactionError) {
@@ -95,11 +109,12 @@ async function addSavingToDb(saving: Omit<SavingFormValues, 'deposit_date'> & { 
 
 interface AddSavingProps {
   members?: Member[];
+  savingSchemes: SavingScheme[];
   defaultMember?: Member;
   triggerButton: React.ReactNode;
 }
 
-export function AddSaving({ members, defaultMember, triggerButton }: AddSavingProps) {
+export function AddSaving({ members, savingSchemes, defaultMember, triggerButton }: AddSavingProps) {
   const [open, setOpen] = React.useState(false);
   const [popoverOpen, setPopoverOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -110,6 +125,7 @@ export function AddSaving({ members, defaultMember, triggerButton }: AddSavingPr
     resolver: zodResolver(savingFormSchema),
     defaultValues: {
       member_id: defaultMember?.id,
+      saving_scheme_id: "",
       amount: 0,
       deposit_date: new Date(),
       notes: "",
@@ -120,6 +136,7 @@ export function AddSaving({ members, defaultMember, triggerButton }: AddSavingPr
     if (open) {
       form.reset({
         member_id: defaultMember?.id,
+        saving_scheme_id: "",
         amount: 0,
         deposit_date: new Date(),
         notes: "",
@@ -171,11 +188,11 @@ export function AddSaving({ members, defaultMember, triggerButton }: AddSavingPr
       <DialogTrigger asChild>
         {triggerButton}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Add Savings Deposit</DialogTitle>
           <DialogDescription>
-            Record a new daily savings deposit for a member.
+            Record a new savings deposit for a member.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -243,6 +260,32 @@ export function AddSaving({ members, defaultMember, triggerButton }: AddSavingPr
                 )}
               />
             )}
+            
+            <FormField
+              control={form.control}
+              name="saving_scheme_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Saving Scheme</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a saving scheme" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {savingSchemes.map(scheme => (
+                        <SelectItem key={scheme.id} value={scheme.id}>
+                          {scheme.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="amount"
@@ -256,6 +299,7 @@ export function AddSaving({ members, defaultMember, triggerButton }: AddSavingPr
                 </FormItem>
               )}
             />
+
             <FormField
               control={form.control}
               name="deposit_date"
@@ -294,6 +338,7 @@ export function AddSaving({ members, defaultMember, triggerButton }: AddSavingPr
                 </FormItem>
               )}
             />
+
             <FormField
               control={form.control}
               name="notes"
@@ -307,6 +352,7 @@ export function AddSaving({ members, defaultMember, triggerButton }: AddSavingPr
                 </FormItem>
               )}
             />
+
             <DialogFooter>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? "Adding..." : "Add Deposit"}
