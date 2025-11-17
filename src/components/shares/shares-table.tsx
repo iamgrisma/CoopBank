@@ -33,14 +33,14 @@ const formatCurrency = (amount: number) => {
 
 export function SharesTable({ shares }: { shares: Share[] }) {
   return (
-    <div className="rounded-lg border shadow-sm">
+    <div className="rounded-lg border shadow-sm overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Member</TableHead>
-            <TableHead>Certificate No.</TableHead>
-            <TableHead>No. of Shares</TableHead>
-            <TableHead>Face Value</TableHead>
+            <TableHead className="hidden sm:table-cell">Certificate No.</TableHead>
+            <TableHead className="hidden md:table-cell">No. of Shares</TableHead>
+            <TableHead className="hidden lg:table-cell">Face Value</TableHead>
             <TableHead>Purchase Date</TableHead>
             <TableHead className="text-right">Total</TableHead>
           </TableRow>
@@ -64,9 +64,9 @@ export function SharesTable({ shares }: { shares: Share[] }) {
                     <span className="text-muted-foreground">N/A</span>
                   )}
                 </TableCell>
-                <TableCell>{share.certificate_number}</TableCell>
-                <TableCell>{share.number_of_shares}</TableCell>
-                <TableCell>{formatCurrency(share.face_value)}</TableCell>
+                <TableCell className="hidden sm:table-cell">{share.certificate_number}</TableCell>
+                <TableCell className="hidden md:table-cell">{share.number_of_shares}</TableCell>
+                <TableCell className="hidden lg:table-cell">{formatCurrency(share.face_value)}</TableCell>
                 <TableCell>
                   {format(new Date(share.purchase_date), "yyyy-MM-dd")}
                 </TableCell>
@@ -79,3 +79,5 @@ export function SharesTable({ shares }: { shares: Share[] }) {
     </div>
   )
 }
+
+    

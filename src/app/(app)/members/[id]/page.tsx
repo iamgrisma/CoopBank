@@ -178,7 +178,7 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="grid auto-rows-max gap-4">
+        <div className="grid auto-rows-max gap-4 lg:col-span-1">
           <Card>
             <CardHeader className="flex flex-col items-center text-center">
                 <Avatar className="h-24 w-24 mb-4">
@@ -195,16 +195,16 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
             </CardHeader>
             <CardContent className="text-sm">
                 <div className="grid gap-3">
-                    <div className="flex items-center gap-3">
-                        <AtSign className="h-4 w-4 text-muted-foreground" />
-                        <span>{member.email || 'No email provided'}</span>
+                    <div className="flex items-start gap-3">
+                        <AtSign className="h-4 w-4 text-muted-foreground mt-1" />
+                        <span className="break-all">{member.email || 'No email provided'}</span>
                     </div>
                     <div className="flex items-center gap-3">
                         <Phone className="h-4 w-4 text-muted-foreground" />
                         <span>{member.phone || 'No phone provided'}</span>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex items-start gap-3">
+                        <MapPin className="h-4 w-4 text-muted-foreground mt-1" />
                         <span>{member.address || 'No address provided'}</span>
                     </div>
                      <div className="flex items-center gap-3">
@@ -218,12 +218,12 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
 
         <div className="md:col-span-2">
             <Tabs defaultValue="shares">
-                <TabsList className="grid w-full grid-cols-5">
+                <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5">
                     <TabsTrigger value="shares">Shares</TabsTrigger>
                     <TabsTrigger value="savings">Savings</TabsTrigger>
                     <TabsTrigger value="loans">Loans</TabsTrigger>
-                    <TabsTrigger value="statement">Statement</TabsTrigger>
-                    <TabsTrigger value="kyc">KYC</TabsTrigger>
+                    <TabsTrigger value="statement" className="hidden sm:inline-flex">Statement</TabsTrigger>
+                    <TabsTrigger value="kyc" className="hidden sm:inline-flex">KYC</TabsTrigger>
                 </TabsList>
                 <TabsContent value="shares">
                     <Card>
@@ -233,7 +233,7 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                             </div>
                             <div className="ml-auto flex items-center gap-2">
                                 <AddShare
-                                  triggerButton={<Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Share</Button>}
+                                  triggerButton={<Button size="sm"><PlusCircle className="mr-0 sm:mr-2 h-4 w-4" /><span className="hidden sm:inline">Add Share</span></Button>}
                                   defaultMember={{ id: member.id, name: member.name || '' }}
                                 />
                             </div>
@@ -253,8 +253,8 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Cert. No</TableHead>
-                                        <TableHead>No. of Shares</TableHead>
-                                        <TableHead>Face Value</TableHead>
+                                        <TableHead className="hidden sm:table-cell">No. of Shares</TableHead>
+                                        <TableHead className="hidden md:table-cell">Face Value</TableHead>
                                         <TableHead>Purchase Date</TableHead>
                                         <TableHead className="text-right">Total</TableHead>
                                     </TableRow>
@@ -263,9 +263,9 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                                     {shares.map(share => (
                                         <TableRow key={share.id}>
                                             <TableCell>{share.certificate_number}</TableCell>
-                                            <TableCell>{share.number_of_shares}</TableCell>
-                                            <TableCell>{formatCurrency(share.face_value)}</TableCell>
-                                            <TableCell>{format(new Date(share.purchase_date), "do MMM, yyyy")}</TableCell>
+                                            <TableCell className="hidden sm:table-cell">{share.number_of_shares}</TableCell>
+                                            <TableCell className="hidden md:table-cell">{formatCurrency(share.face_value)}</TableCell>
+                                            <TableCell>{format(new Date(share.purchase_date), "do MMM, yy")}</TableCell>
                                             <TableCell className="text-right">{formatCurrency(share.number_of_shares * share.face_value)}</TableCell>
                                         </TableRow>
                                     ))}
@@ -283,13 +283,13 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                             <div className="ml-auto flex items-center gap-2">
                                 <AddSaving
                                   savingSchemes={savingSchemes}
-                                  triggerButton={<Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Deposit</Button>}
+                                  triggerButton={<Button size="sm"><PlusCircle className="mr-0 sm:mr-2 h-4 w-4" /><span className="hidden sm:inline">Add Deposit</span></Button>}
                                   defaultMember={{ id: member.id, name: member.name || '' }}
                                 />
                             </div>
                         </CardHeader>
                         <CardContent>
-                             <div className="mb-4 grid grid-cols-2 gap-4">
+                             <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
                                     <h3 className="text-sm font-medium text-muted-foreground">Total Savings Balance</h3>
                                     <p className="text-2xl font-bold">{formatCurrency(totalSavings)}</p>
@@ -314,15 +314,15 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                                                 <TableHeader>
                                                     <TableRow>
                                                         <TableHead>Deposit Date</TableHead>
-                                                        <TableHead>Notes</TableHead>
+                                                        <TableHead className="hidden sm:table-cell">Notes</TableHead>
                                                         <TableHead className="text-right">Amount</TableHead>
                                                     </TableRow>
                                                 </TableHeader>
                                                 <TableBody>
                                                     {schemeData.deposits.map(saving => (
                                                         <TableRow key={saving.id}>
-                                                            <TableCell>{format(new Date(saving.deposit_date), "do MMM, yyyy")}</TableCell>
-                                                            <TableCell>{saving.notes}</TableCell>
+                                                            <TableCell>{format(new Date(saving.deposit_date), "do MMM, yy")}</TableCell>
+                                                            <TableCell className="hidden sm:table-cell">{saving.notes}</TableCell>
                                                             <TableCell className="text-right">{formatCurrency(saving.amount)}</TableCell>
                                                         </TableRow>
                                                     ))}
@@ -345,7 +345,7 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                                  <AddLoan
                                     loanSchemes={loanSchemes}
                                     defaultMember={{ id: member.id, name: member.name || '' }}
-                                    triggerButton={<Button size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Loan</Button>}
+                                    triggerButton={<Button size="sm"><PlusCircle className="mr-0 sm:mr-2 h-4 w-4" /><span className="hidden sm:inline">Add Loan</span></Button>}
                                 />
                             </div>
                         </CardHeader>
@@ -360,8 +360,8 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Scheme</TableHead>
-                                        <TableHead>Disbursed</TableHead>
-                                        <TableHead>Term</TableHead>
+                                        <TableHead className="hidden sm:table-cell">Disbursed</TableHead>
+                                        <TableHead className="hidden md:table-cell">Term</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead className="text-right">Amount</TableHead>
                                         <TableHead><span className="sr-only">Actions</span></TableHead>
@@ -371,8 +371,8 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                                     {loans.map(loan => (
                                         <TableRow key={loan.id}>
                                             <TableCell>{loan.loan_schemes?.name}</TableCell>
-                                            <TableCell>{format(new Date(loan.disbursement_date), "do MMM, yyyy")}</TableCell>
-                                            <TableCell>{loan.loan_term_months} months</TableCell>
+                                            <TableCell className="hidden sm:table-cell">{format(new Date(loan.disbursement_date), "do MMM, yy")}</TableCell>
+                                            <TableCell className="hidden md:table-cell">{loan.loan_term_months} months</TableCell>
                                             <TableCell><Badge variant="outline">{loan.status}</Badge></TableCell>
                                             <TableCell className="text-right">{formatCurrency(loan.amount)}</TableCell>
                                             <TableCell className="text-right">
@@ -403,7 +403,7 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                         </CardHeader>
                         <CardContent>
                              <div className="grid gap-6">
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                   <div>
                                       <h3 className="font-semibold mb-1 text-sm">Identification Document</h3>
                                       <p className="text-sm">{member.identification_type || 'N/A'}: {member.identification_number || 'N/A'}</p>
@@ -413,7 +413,7 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                                       <p className="text-sm">{member.identification_issue_date ? format(new Date(member.identification_issue_date), "do MMMM, yyyy") : 'N/A'}</p>
                                   </div>
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                  <div>
                                     <h3 className="font-semibold mb-1 text-sm">Nominee</h3>
                                     <p className="text-sm">{member.nominee_name || 'Not specified'}</p>

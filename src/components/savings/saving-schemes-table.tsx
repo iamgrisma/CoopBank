@@ -21,14 +21,14 @@ type SavingScheme = {
 
 export function SavingSchemesTable({ schemes }: { schemes: SavingScheme[] }) {
   return (
-    <div className="rounded-lg border shadow-sm">
+    <div className="rounded-lg border shadow-sm overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Scheme Name</TableHead>
-            <TableHead>Type</TableHead>
+            <TableHead className="hidden sm:table-cell">Type</TableHead>
             <TableHead>Interest Rate</TableHead>
-            <TableHead>Lock-in Period</TableHead>
+            <TableHead className="hidden md:table-cell">Lock-in Period</TableHead>
             <TableHead>Status</TableHead>
           </TableRow>
         </TableHeader>
@@ -43,11 +43,11 @@ export function SavingSchemesTable({ schemes }: { schemes: SavingScheme[] }) {
             schemes.map((scheme) => (
               <TableRow key={scheme.id}>
                 <TableCell className="font-medium">{scheme.name}</TableCell>
-                <TableCell>
+                <TableCell className="hidden sm:table-cell">
                     <Badge variant={scheme.type === 'LTD' ? 'destructive' : scheme.type === 'Current' ? 'outline' : 'secondary'}>{scheme.type}</Badge>
                 </TableCell>
                 <TableCell>{scheme.interest_rate}%</TableCell>
-                <TableCell>{scheme.lock_in_period_years ? `${scheme.lock_in_period_years} years` : 'N/A'}</TableCell>
+                <TableCell className="hidden md:table-cell">{scheme.lock_in_period_years ? `${scheme.lock_in_period_years} years` : 'N/A'}</TableCell>
                  <TableCell>
                     <Badge variant={scheme.is_active ? 'default' : 'outline'}>
                         {scheme.is_active ? 'Active' : 'Inactive'}
@@ -61,3 +61,5 @@ export function SavingSchemesTable({ schemes }: { schemes: SavingScheme[] }) {
     </div>
   )
 }
+
+    

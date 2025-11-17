@@ -56,15 +56,14 @@ const getStatusBadgeVariant = (status: string) => {
 
 export function LoansTable({ loans }: { loans: Loan[] }) {
   return (
-    <div className="rounded-lg border shadow-sm">
+    <div className="rounded-lg border shadow-sm overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Member</TableHead>
-            <TableHead>Scheme</TableHead>
-            <TableHead>Disbursement Date</TableHead>
-            <TableHead>Term</TableHead>
-            <TableHead>Interest</TableHead>
+            <TableHead className="hidden sm:table-cell">Scheme</TableHead>
+            <TableHead className="hidden md:table-cell">Disbursed</TableHead>
+            <TableHead className="hidden lg:table-cell">Term</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Amount</TableHead>
             <TableHead><span className="sr-only">Actions</span></TableHead>
@@ -89,12 +88,11 @@ export function LoansTable({ loans }: { loans: Loan[] }) {
                     <span className="text-muted-foreground">N/A</span>
                   )}
                 </TableCell>
-                <TableCell>{loan.loan_schemes?.name}</TableCell>
-                <TableCell>
+                <TableCell className="hidden sm:table-cell">{loan.loan_schemes?.name}</TableCell>
+                <TableCell className="hidden md:table-cell">
                   {format(new Date(loan.disbursement_date), "yyyy-MM-dd")}
                 </TableCell>
-                 <TableCell>{loan.loan_term_months} months</TableCell>
-                 <TableCell>{loan.interest_rate}%</TableCell>
+                 <TableCell className="hidden lg:table-cell">{loan.loan_term_months} months</TableCell>
                  <TableCell>
                     <Badge variant={getStatusBadgeVariant(loan.status)}>
                         {loan.status}
@@ -112,3 +110,5 @@ export function LoansTable({ loans }: { loans: Loan[] }) {
     </div>
   )
 }
+
+    

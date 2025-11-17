@@ -32,14 +32,14 @@ const formatCurrency = (amount: number) => {
 
 export function LoanSchemesTable({ schemes }: { schemes: LoanScheme[] }) {
   return (
-    <div className="rounded-lg border shadow-sm">
+    <div className="rounded-lg border shadow-sm overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Scheme Name</TableHead>
-            <TableHead>Interest Rate</TableHead>
-            <TableHead>Term (Months)</TableHead>
-            <TableHead>Repayment</TableHead>
+            <TableHead className="hidden sm:table-cell">Interest Rate</TableHead>
+            <TableHead className="hidden md:table-cell">Term (Months)</TableHead>
+            <TableHead className="hidden sm:table-cell">Repayment</TableHead>
             <TableHead>Status</TableHead>
           </TableRow>
         </TableHeader>
@@ -54,9 +54,9 @@ export function LoanSchemesTable({ schemes }: { schemes: LoanScheme[] }) {
             schemes.map((scheme) => (
               <TableRow key={scheme.id}>
                 <TableCell className="font-medium">{scheme.name}</TableCell>
-                <TableCell>{scheme.default_interest_rate}%</TableCell>
-                <TableCell>{scheme.min_term_months} - {scheme.max_term_months}</TableCell>
-                <TableCell>{scheme.repayment_frequency}</TableCell>
+                <TableCell className="hidden sm:table-cell">{scheme.default_interest_rate}%</TableCell>
+                <TableCell className="hidden md:table-cell">{scheme.min_term_months} - {scheme.max_term_months}</TableCell>
+                <TableCell className="hidden sm:table-cell">{scheme.repayment_frequency}</TableCell>
                  <TableCell>
                     <Badge variant={scheme.is_active ? 'default' : 'secondary'}>
                         {scheme.is_active ? 'Active' : 'Inactive'}
@@ -70,3 +70,5 @@ export function LoanSchemesTable({ schemes }: { schemes: LoanScheme[] }) {
     </div>
   )
 }
+
+    

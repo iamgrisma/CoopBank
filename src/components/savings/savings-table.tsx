@@ -36,14 +36,14 @@ const formatCurrency = (amount: number) => {
 
 export function SavingsTable({ savings }: { savings: Saving[] }) {
   return (
-    <div className="rounded-lg border shadow-sm">
+    <div className="rounded-lg border shadow-sm overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Member</TableHead>
-            <TableHead>Scheme</TableHead>
-            <TableHead>Deposit Date</TableHead>
-            <TableHead>Notes</TableHead>
+            <TableHead className="hidden sm:table-cell">Scheme</TableHead>
+            <TableHead className="hidden md:table-cell">Deposit Date</TableHead>
+            <TableHead className="hidden lg:table-cell">Notes</TableHead>
             <TableHead className="text-right">Amount</TableHead>
           </TableRow>
         </TableHeader>
@@ -66,11 +66,11 @@ export function SavingsTable({ savings }: { savings: Saving[] }) {
                     <span className="text-muted-foreground">N/A</span>
                   )}
                 </TableCell>
-                <TableCell>{saving.saving_schemes?.name}</TableCell>
-                <TableCell>
+                <TableCell className="hidden sm:table-cell">{saving.saving_schemes?.name}</TableCell>
+                <TableCell className="hidden md:table-cell">
                   {format(new Date(saving.deposit_date), "yyyy-MM-dd")}
                 </TableCell>
-                 <TableCell>{saving.notes}</TableCell>
+                 <TableCell className="hidden lg:table-cell">{saving.notes}</TableCell>
                  <TableCell className="text-right">{formatCurrency(saving.amount)}</TableCell>
               </TableRow>
             ))
@@ -80,3 +80,5 @@ export function SavingsTable({ savings }: { savings: Saving[] }) {
     </div>
   )
 }
+
+    

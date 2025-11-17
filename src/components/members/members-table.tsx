@@ -44,14 +44,14 @@ const getInitials = (name: string | undefined) => {
 
 export function MembersTable({ members }: { members: Member[] }) {
   return (
-    <div className="rounded-lg border shadow-sm">
+    <div className="rounded-lg border shadow-sm overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Name</TableHead>
-            <TableHead>Contact</TableHead>
-            <TableHead>Address</TableHead>
-            <TableHead>Join Date</TableHead>
+            <TableHead className="hidden md:table-cell">Contact</TableHead>
+            <TableHead className="hidden sm:table-cell">Address</TableHead>
+            <TableHead className="hidden lg:table-cell">Join Date</TableHead>
             <TableHead>
               <span className="sr-only">Actions</span>
             </TableHead>
@@ -73,22 +73,25 @@ export function MembersTable({ members }: { members: Member[] }) {
                         {member.photo_url && <AvatarImage src={member.photo_url} alt={member.name} />}
                         <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
                     </Avatar>
-                    <Link href={`/members/${member.id}`} className="hover:underline text-primary">
-                      {member.name}
-                    </Link>
+                     <div className="flex flex-col">
+                        <Link href={`/members/${member.id}`} className="hover:underline text-primary font-medium leading-tight">
+                        {member.name}
+                        </Link>
+                        <div className="text-muted-foreground text-sm md:hidden">{member.phone}</div>
+                    </div>
                   </div>
                 </TableCell>
-                <TableCell>
+                <TableCell className="hidden md:table-cell">
                   <div className="flex flex-col break-all">
                     <span>{member.email}</span>
                     <span className="text-muted-foreground">{member.phone}</span>
                   </div>
                 </TableCell>
-                <TableCell>{member.address}</TableCell>
-                <TableCell>
+                <TableCell className="hidden sm:table-cell">{member.address}</TableCell>
+                <TableCell className="hidden lg:table-cell">
                   {format(new Date(member.join_date), "yyyy-MM-dd")}
                 </TableCell>
-                <TableCell>
+                <TableCell className="text-right">
                   <EditMember member={member} />
                 </TableCell>
               </TableRow>
