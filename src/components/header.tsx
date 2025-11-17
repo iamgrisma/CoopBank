@@ -11,6 +11,7 @@ import {
   Wallet,
   Search,
   Globe,
+  Menu,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -23,6 +24,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "./ui/tooltip";
+import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
+import { useState } from "react";
 
 const mainNavLinks = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -36,22 +40,64 @@ const mainNavLinks = [
 ];
 
 
-const MainNav = () => {
+const MainNav = ({ isMobile = false }: { isMobile?: boolean }) => {
     const pathname = usePathname();
+    const [open, setOpen] = useState(false);
+
+    const NavLink = ({ href, label, icon: Icon }: typeof mainNavLinks[0]) => (
+         <TooltipProvider delayDuration={0}>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Link
+                        href={href}
+                        onClick={() => isMobile && setOpen(false)}
+                        className={cn(
+                            "text-sm font-medium transition-colors hover:text-primary flex items-center gap-2",
+                            pathname === href ? "text-primary" : "text-muted-foreground",
+                            isMobile ? "text-lg p-2" : ""
+                        )}
+                    >
+                        <Icon className="h-5 w-5" />
+                        <span className={cn(isMobile ? "" : "hidden md:inline")}>{label}</span>
+                    </Link>
+                </TooltipTrigger>
+                {!isMobile && (
+                    <TooltipContent side="bottom" className="md:hidden">
+                        {label}
+                    </TooltipContent>
+                )}
+            </Tooltip>
+        </TooltipProvider>
+    );
+
+    if (isMobile) {
+        return (
+            <Sheet open={open} onOpenChange={setOpen}>
+                <SheetTrigger asChild>
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        className="shrink-0 md:hidden"
+                    >
+                        <Menu className="h-5 w-5" />
+                        <span className="sr-only">Toggle navigation menu</span>
+                    </Button>
+                </SheetTrigger>
+                <SheetContent side="left">
+                    <nav className="grid gap-6 text-lg font-medium mt-8">
+                         {mainNavLinks.map((link) => (
+                            <NavLink key={link.href} {...link} />
+                         ))}
+                    </nav>
+                </SheetContent>
+            </Sheet>
+        )
+    }
+
     return (
-        <nav className="flex items-center space-x-4 lg:space-x-6">
-            {mainNavLinks.map(({ href, label, icon: Icon }) => (
-                <Link
-                    key={href}
-                    href={href}
-                    className={cn(
-                        "text-sm font-medium transition-colors hover:text-primary flex items-center gap-2",
-                        pathname === href ? "text-primary" : "text-muted-foreground"
-                    )}
-                >
-                    <Icon className="h-4 w-4" />
-                    <span>{label}</span>
-                </Link>
+        <nav className="hidden md:flex items-center space-x-4 lg:space-x-6">
+            {mainNavLinks.map((link) => (
+                <NavLink key={link.href} {...link} />
             ))}
         </nav>
     )
@@ -65,15 +111,19 @@ export function Header() {
         className="flex items-center gap-2 font-semibold font-headline text-lg mr-4"
       >
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-primary"><path d="M2 7v10M2 12h10M12 7v10M16 7v10M22 7v10M16 12h6"/></svg>
-        <span>CoopBank</span>
+        <span className="hidden sm:inline">CoopBank</span>
       </Link>
       
       <div className="flex-1">
         <MainNav />
       </div>
+      
+      <div className="md:hidden">
+        <MainNav isMobile />
+      </div>
 
       <div className="flex items-center gap-4">
-         <form>
+         <form className="hidden md:block">
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
