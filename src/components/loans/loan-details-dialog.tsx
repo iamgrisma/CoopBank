@@ -24,6 +24,7 @@ import { Badge } from "../ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
 import { RestructureLoanDialog } from "./restructure-loan";
+import { Skeleton } from "../ui/skeleton";
 
 
 type LoanScheme = {
@@ -64,7 +65,7 @@ export function LoanDetailsDialog({ loan, allLoanSchemes, trigger }: LoanDetails
   const [repayments, setRepayments] = React.useState<Repayment[]>([]);
   const [schedule, setSchedule] = React.useState<AmortizationEntry[]>([]);
   const [idealSchedule, setIdealSchedule] = React.useState<any[]>([]); // Using any to avoid type errors with ideal schedule generation
-  const [isLoading, setIsLoading] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(true);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -209,7 +210,7 @@ export function LoanDetailsDialog({ loan, allLoanSchemes, trigger }: LoanDetails
                     <CardTitle className="text-sm font-medium text-muted-foreground">Outstanding Principal</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p className="font-bold text-lg text-red-600">{formatCurrency(outstandingBalance)}</p>
+                    {isLoading ? <Skeleton className="h-7 w-3/4" /> : <p className="font-bold text-lg text-red-600">{formatCurrency(outstandingBalance)}</p>}
                 </CardContent>
             </Card>
             <Card>
@@ -217,7 +218,7 @@ export function LoanDetailsDialog({ loan, allLoanSchemes, trigger }: LoanDetails
                     <CardTitle className="text-sm font-medium text-muted-foreground">Total Due Today</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p className="font-bold text-lg text-orange-600">{formatCurrency(totalDueToday)}</p>
+                    {isLoading ? <Skeleton className="h-7 w-3/4" /> : <p className="font-bold text-lg text-orange-600">{formatCurrency(totalDueToday)}</p>}
                 </CardContent>
             </Card>
             <Card>
@@ -225,7 +226,7 @@ export function LoanDetailsDialog({ loan, allLoanSchemes, trigger }: LoanDetails
                     <CardTitle className="text-sm font-medium text-muted-foreground">Total Repaid</CardTitle>
                 </CardHeader>
                 <CardContent>
-                     <p className="font-bold text-lg text-green-600">{formatCurrency(totalRepaid)}</p>
+                     {isLoading ? <Skeleton className="h-7 w-3/4" /> : <p className="font-bold text-lg text-green-600">{formatCurrency(totalRepaid)}</p>}
                 </CardContent>
             </Card>
              <div className="flex items-center justify-center gap-2">
@@ -236,7 +237,7 @@ export function LoanDetailsDialog({ loan, allLoanSchemes, trigger }: LoanDetails
                     schedule={schedule}
                     onRepaymentAdded={handleActionCompleted}
                     triggerButton={
-                        <Button><PlusCircle className="mr-2 h-4 w-4" /> Add Repayment</Button>
+                        <Button disabled={isLoading}><PlusCircle className="mr-2 h-4 w-4" /> Add Repayment</Button>
                     }
                 />
                  <RestructureLoanDialog 
@@ -249,7 +250,7 @@ export function LoanDetailsDialog({ loan, allLoanSchemes, trigger }: LoanDetails
                     isLoanActive={isLoanActive}
                     onRestructureComplete={handleActionCompleted}
                     trigger={
-                        <Button variant="secondary" disabled={!isLoanActive || isLoanOverdue}>Restructure</Button>
+                        <Button variant="secondary" disabled={isLoading || !isLoanActive || isLoanOverdue}>Restructure</Button>
                     }
                  />
             </div>
@@ -311,8 +312,8 @@ export function LoanDetailsDialog({ loan, allLoanSchemes, trigger }: LoanDetails
                         <TableBody>
                         {isLoading ? (
                             <TableRow><TableCell colSpan={7} className="h-24 text-center">Loading schedule...</TableCell></TableRow>
-                        ) : schedule.length > 0 ? schedule.map((entry) => (
-                            <TableRow key={entry.month} className={entry.status === 'OVERDUE' ? 'bg-red-50 dark:bg-red-900/20' : ''}>
+                        ) : schedule.length > 0 ? schedule.map((entry, idx) => (
+                            <TableRow key={idx} className={entry.status === 'OVERDUE' ? 'bg-red-50 dark:bg-red-900/20' : ''}>
                                 <TableCell>{format(entry.paymentDate, "do MMM, yyyy")}</TableCell>
                                 <TableCell>{getStatusBadge(entry.status)}</TableCell>
                                 <TableCell className="text-right">{formatCurrency(entry.principal)}</TableCell>
@@ -344,7 +345,7 @@ export function LoanDetailsDialog({ loan, allLoanSchemes, trigger }: LoanDetails
                                 <CardTitle className="text-sm font-medium text-muted-foreground">Total Principal Paid</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <p className="font-bold text-lg">{formatCurrency(totalPrincipalRepaid)}</p>
+                                {isLoading ? <Skeleton className="h-7 w-3/4"/> : <p className="font-bold text-lg">{formatCurrency(totalPrincipalRepaid)}</p>}
                             </CardContent>
                         </Card>
                         <Card>
@@ -352,7 +353,7 @@ export function LoanDetailsDialog({ loan, allLoanSchemes, trigger }: LoanDetails
                                 <CardTitle className="text-sm font-medium text-muted-foreground">Total Interest Paid</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <p className="font-bold text-lg">{formatCurrency(totalInterestPaid)}</p>
+                                {isLoading ? <Skeleton className="h-7 w-3/4"/> : <p className="font-bold text-lg">{formatCurrency(totalInterestPaid)}</p>}
                             </CardContent>
                         </Card>
                         <Card>
@@ -360,7 +361,7 @@ export function LoanDetailsDialog({ loan, allLoanSchemes, trigger }: LoanDetails
                                 <CardTitle className="text-sm font-medium text-muted-foreground">Total Penal Interest Paid</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <p className="font-bold text-lg">{formatCurrency(totalPenalInterestPaid)}</p>
+                                {isLoading ? <Skeleton className="h-7 w-3/4"/> : <p className="font-bold text-lg">{formatCurrency(totalPenalInterestPaid)}</p>}
                             </CardContent>
                         </Card>
                         <Card>
@@ -368,7 +369,7 @@ export function LoanDetailsDialog({ loan, allLoanSchemes, trigger }: LoanDetails
                                 <CardTitle className="text-sm font-medium text-muted-foreground">Total Fines Paid</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <p className="font-bold text-lg">{formatCurrency(totalPenaltyPaid)}</p>
+                                {isLoading ? <Skeleton className="h-7 w-3/4"/> : <p className="font-bold text-lg">{formatCurrency(totalPenaltyPaid)}</p>}
                             </CardContent>
                         </Card>
                     </div>
@@ -413,3 +414,5 @@ export function LoanDetailsDialog({ loan, allLoanSchemes, trigger }: LoanDetails
     </Dialog>
   );
 }
+
+    

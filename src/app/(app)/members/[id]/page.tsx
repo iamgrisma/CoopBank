@@ -17,41 +17,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { calculateAccruedInterestForAllSavings } from "@/lib/saving-utils";
 import { formatCurrency } from "@/lib/utils";
 import { AccountStatement } from "@/components/members/account-statement";
-import { Repayment, RepaymentFrequency } from "@/lib/loan-utils";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
-
-// This function must only be used on the server
-const generateDynamicAmortizationSchedule = (
-    principal: number,
-    annualRate: number,
-    termMonths: number,
-    disbursementDate: Date,
-    repayments: Repayment[],
-    frequency: RepaymentFrequency,
-    gracePeriodMonths: number
-  ): any[] => {
-    // This is a simplified placeholder. The full implementation is in loan-utils,
-    // but we need a server-side version that doesn't cause import errors.
-    // In a real scenario, you'd share the type but not the implementation if it has client-side dependencies.
-    const schedule = [];
-    let balance = principal;
-    const monthlyRate = annualRate / 12 / 100;
-    for (let i = 1; i <= termMonths; i++) {
-        const interest = balance * monthlyRate;
-        const principalPayment = (principal / termMonths);
-        balance -= principalPayment;
-        schedule.push({
-            month: i,
-            paymentDate: addMonths(disbursementDate, i),
-            principal: principalPayment,
-            interest: interest,
-            endingBalance: balance,
-            status: 'UPCOMING',
-            totalDue: principalPayment + interest,
-        });
-    }
-    return schedule;
-  };
 
 const getInitials = (name: string | undefined) => {
   if (!name) return "U";
@@ -119,7 +85,6 @@ async function getMemberData(id: string) {
         loanSchemesRes,
         savingSchemesRes,
         transactionsRes,
-        allRepaymentsRes,
     ] = await Promise.all([
         supabase.from('shares').select('*').eq('member_id', id).order('purchase_date', { ascending: false }),
         supabase.from('savings').select('*, saving_schemes (id, name, type, interest_rate)').eq('member_id', id).order('deposit_date', { ascending: false }),
@@ -127,7 +92,6 @@ async function getMemberData(id: string) {
         supabase.from('loan_schemes').select('*').order('name', { ascending: true }),
         supabase.from('saving_schemes').select('*').order('name', { ascending: true }),
         supabase.from('transactions').select('*').eq('member_id', id).order('date', { ascending: true }),
-        supabase.from('loan_repayments').select('*').in('loan_id', (await supabase.from('loans').select('id').eq('member_id', id)).data?.map(l => l.id) || []),
     ]);
 
     return {
@@ -138,7 +102,6 @@ async function getMemberData(id: string) {
         loanSchemes: loanSchemesRes.data || [],
         savingSchemes: savingSchemesRes.data || [],
         transactions: transactionsRes.data || [],
-        allRepayments: allRepaymentsRes.data || [],
     }
 }
 
@@ -152,41 +115,20 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
       loanSchemes,
       savingSchemes,
       transactions,
-      allRepayments
   } = await getMemberData(params.id);
 
   const activeLoans = loans.filter(l => !['Paid Off', 'Rejected', 'Restructured'].includes(l.status));
-  const activeLoanIds = activeLoans.map(l => l.id);
-  const repaymentsForActiveLoans = allRepayments.filter(r => activeLoanIds.includes(r.loan_id));
-
+  
   const totalSharesValue = shares.reduce((acc, share) => acc + (share.number_of_shares * share.face_value), 0);
   const totalSharesCount = shares.reduce((acc, share) => acc + share.number_of_shares, 0);
 
   const totalSavings = savings.reduce((acc, saving) => acc + saving.amount, 0);
   
   const totalLoanAmount = activeLoans.reduce((acc, loan) => acc + loan.amount, 0);
-  const totalRepaidAmount = allRepayments.reduce((acc, p) => acc + p.amount_paid, 0);
-  const totalPrincipalRepaid = repaymentsForActiveLoans.reduce((acc, p) => acc + p.principal_paid, 0);
-  const remainingPrincipal = totalLoanAmount - totalPrincipalRepaid;
   
-  let totalOverdue = 0;
-  for (const loan of loans.filter(l => l.status === 'Active')) {
-    const loanRepayments = allRepayments.filter(r => r.loan_id === loan.id) as Repayment[];
-    const schedule = generateDynamicAmortizationSchedule(
-        loan.amount,
-        loan.interest_rate,
-        loan.loan_term_months,
-        new Date(loan.disbursement_date),
-        loanRepayments,
-        loan.repayment_frequency as RepaymentFrequency,
-        loan.grace_period_months
-    );
-    const overdueForLoan = schedule
-        .filter(entry => entry.status === 'OVERDUE' || entry.status === 'DUE')
-        .reduce((sum, entry) => sum + entry.totalDue, 0);
-    totalOverdue += overdueForLoan;
-  }
-
+  // NOTE: More complex calculations like total repaid, overdue, etc.,
+  // are now performed on the client-side within the LoanDetailsDialog component
+  // to avoid mixing server/client logic in utility files.
   const totalAccruedInterest = calculateAccruedInterestForAllSavings(savings);
 
   const savingsByScheme = savings.reduce((acc, saving) => {
@@ -367,15 +309,15 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                         <CardContent>
                             <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                 <StatCard title="Total Loaned" value={formatCurrency(totalLoanAmount)} icon={HandCoins} />
-                                <StatCard title="Total Repaid" value={formatCurrency(totalRepaidAmount)} icon={Wallet} />
-                                <StatCard title="Remaining Principal" value={formatCurrency(remainingPrincipal)} icon={Scale} />
-                                <Card className={totalOverdue > 0 ? "bg-destructive/10 border-destructive/50" : ""}>
+                                <StatCard title="Total Repaid" value="N/A" icon={Wallet} />
+                                <StatCard title="Remaining Principal" value="N/A" icon={Scale} />
+                                <Card>
                                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                         <CardTitle className="text-sm font-medium">Total Overdue</CardTitle>
                                         <TrendingDown className="h-4 w-4 text-muted-foreground" />
                                     </CardHeader>
                                     <CardContent>
-                                        <div className={`text-2xl font-bold ${totalOverdue > 0 ? 'text-destructive' : ''}`}>{formatCurrency(totalOverdue)}</div>
+                                        <div className='text-2xl font-bold'>N/A</div>
                                     </CardContent>
                                 </Card>
                             </div>
@@ -479,3 +421,4 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
   );
 }
 
+    
