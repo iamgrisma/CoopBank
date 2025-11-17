@@ -123,9 +123,10 @@ export default function MemberProfileClientPage({
     let remainingPrincipal = 0;
     let totalOverdue = 0;
 
+    totalRepaid = repayments.reduce((sum, r) => sum + r.amount_paid, 0);
+
     loans.forEach(loan => {
         const loanRepayments = repayments.filter(r => r.loan_id === loan.id);
-        totalRepaid += loanRepayments.reduce((sum, r) => sum + r.amount_paid, 0);
 
         const principalPaid = loanRepayments.reduce((sum, r) => sum + r.principal_paid, 0);
         remainingPrincipal += (loan.amount - principalPaid);

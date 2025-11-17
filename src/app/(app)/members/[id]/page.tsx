@@ -71,7 +71,7 @@ export default function MemberProfilePage() {
                 supabase.from('loan_schemes').select('*').order('name', { ascending: true }),
                 supabase.from('saving_schemes').select('*').order('name', { ascending: true }),
                 supabase.from('transactions').select('*').eq('member_id', id).order('date', { ascending: true }),
-                supabase.from('loan_repayments').select('*').eq('member_id', id).order('payment_date', { ascending: true }),
+                supabase.from('loan_repayments').select('*').in('loan_id', (await supabase.from('loans').select('id').eq('member_id', id)).data?.map(l => l.id) || []),
             ]);
 
             setData({
