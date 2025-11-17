@@ -1,4 +1,5 @@
 
+
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -21,7 +22,7 @@ import { calculateAccruedInterestForAllSavings } from "@/lib/saving-utils";
 async function getMember(supabase: SupabaseClient, id: string) {
   const { data: member, error } = await supabase
     .from("members")
-    .select("*, district:districts(name), province:provinces(name), local_level:local_levels(name)")
+    .select("*, district:districts!district_code(name), province:provinces!province_code(name), local_level:local_levels!local_level_code(name)")
     .eq("id", id)
     .single();
   
