@@ -185,15 +185,19 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
 
   const loanIds = loans.map(l => l.id);
   const allRepayments = await getRepayments(supabase, loanIds);
+  
+  const activeLoans = loans.filter(l => !['Paid Off', 'Rejected', 'Restructured'].includes(l.status));
+  const activeLoanIds = activeLoans.map(l => l.id);
+  const repaymentsForActiveLoans = allRepayments.filter(r => activeLoanIds.includes(r.loan_id));
 
   const totalSharesValue = shares.reduce((acc, share) => acc + (share.number_of_shares * share.face_value), 0);
   const totalSharesCount = shares.reduce((acc, share) => acc + share.number_of_shares, 0);
 
   const totalSavings = savings.reduce((acc, saving) => acc + saving.amount, 0);
   
-  const totalLoanAmount = loans.reduce((acc, loan) => acc + loan.amount, 0);
+  const totalLoanAmount = activeLoans.reduce((acc, loan) => acc + loan.amount, 0);
   const totalRepaidAmount = allRepayments.reduce((acc, p) => acc + p.amount_paid, 0);
-  const totalPrincipalRepaid = allRepayments.reduce((acc, p) => acc + p.principal_paid, 0);
+  const totalPrincipalRepaid = repaymentsForActiveLoans.reduce((acc, p) => acc + p.principal_paid, 0);
   const remainingPrincipal = totalLoanAmount - totalPrincipalRepaid;
   
   let totalOverdue = 0;
@@ -542,5 +546,3 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
     </main>
   );
 }
-
-    

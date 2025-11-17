@@ -54,7 +54,7 @@ const formatCurrency = (amount: number) => {
     }).format(amount).replace('NPR', 'रु');
 }
 
-const getStatusBadgeVariant = (status: string) => {
+const getStatusBadgeVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
         case 'Active':
             return 'default';
@@ -128,5 +128,3 @@ export function LoansTable({ loans, allLoanSchemes }: { loans: Loan[], allLoanSc
     </div>
   )
 }
-
-    

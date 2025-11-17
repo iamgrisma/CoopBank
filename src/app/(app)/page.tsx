@@ -30,7 +30,7 @@ async function getDashboardData() {
   const { data: loans, error: loansError } = await supabase
     .from('loans')
     .select('amount')
-    .in('status', ['Active', 'Pending']);
+    .not('status', 'in', '("Paid Off", "Rejected", "Restructured")');
     
   const { data: activeLoans, error: activeLoansError } = await supabase
     .from('loans')
