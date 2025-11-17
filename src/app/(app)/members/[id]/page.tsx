@@ -1,4 +1,5 @@
 
+
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -18,6 +19,7 @@ import { LoanDetailsDialog } from "@/components/loans/loan-details-dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { calculateAccruedInterestForAllSavings } from "@/lib/saving-utils";
 import { formatCurrency } from "@/lib/utils";
+import { AccountStatement } from "@/components/members/account-statement";
 
 async function getMember(supabase: SupabaseClient, id: string) {
   const { data: member, error } = await supabase
@@ -115,6 +117,20 @@ async function getSavingSchemes(supabase: SupabaseClient) {
     return data;
 }
 
+async function getTransactions(supabase: SupabaseClient, memberId: string) {
+    const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('member_id', memberId)
+        .order('date', { ascending: true });
+
+    if (error) {
+        console.error('Error fetching transactions:', error);
+        return [];
+    }
+    return data;
+}
+
 
 const getInitials = (name: string | undefined) => {
   if (!name) return "U";
@@ -143,12 +159,13 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
       notFound();
   }
 
-  const [shares, savings, loans, loanSchemes, savingSchemes] = await Promise.all([
+  const [shares, savings, loans, loanSchemes, savingSchemes, transactions] = await Promise.all([
     getShares(supabase, params.id),
     getSavings(supabase, params.id),
     getLoans(supabase, params.id),
     getLoanSchemes(supabase),
-    getSavingSchemes(supabase)
+    getSavingSchemes(supabase),
+    getTransactions(supabase, params.id)
   ]);
 
   const totalSharesValue = shares.reduce((acc, share) => acc + (share.number_of_shares * share.face_value), 0);
@@ -219,7 +236,7 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                     <TabsTrigger value="shares">Shares</TabsTrigger>
                     <TabsTrigger value="savings">Savings</TabsTrigger>
                     <TabsTrigger value="loans">Loans</TabsTrigger>
-                    <TabsTrigger value="statement" className="hidden sm:inline-flex">Statement</TabsTrigger>
+                    <TabsTrigger value="statement">Statement</TabsTrigger>
                     <TabsTrigger value="kyc" className="hidden sm:inline-flex">KYC</TabsTrigger>
                 </TabsList>
                 <TabsContent value="shares">
@@ -388,7 +405,7 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                             <CardTitle>Account Statement</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-muted-foreground">Feature coming soon.</p>
+                            <AccountStatement transactions={transactions} />
                         </CardContent>
                     </Card>
                 </TabsContent>
@@ -453,5 +470,7 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
     </main>
   );
 }
+
+    
 
     
