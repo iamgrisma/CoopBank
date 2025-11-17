@@ -4,6 +4,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { formatCurrency } from "@/lib/utils";
 import { HandCoins, Landmark, UsersRound, Wallet } from "lucide-react"
 
 type OverviewData = {
@@ -11,15 +12,6 @@ type OverviewData = {
   shares: number;
   savings: number;
   loans: number;
-}
-
-const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'NPR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount).replace('NPR', 'रु');
 }
 
 export function OverviewCards({ overview }: { overview: OverviewData }) {

@@ -12,6 +12,8 @@ import {
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { formatCurrency } from "@/lib/utils";
+
 
 type Account = {
   account_number: string | null;
@@ -25,14 +27,6 @@ type MemberWithAccounts = {
   name: string;
   photo_url: string | null;
   accounts: Account[];
-};
-
-const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'NPR',
-      minimumFractionDigits: 2,
-    }).format(amount).replace('NPR', 'रु');
 };
 
 const getInitials = (name: string | undefined) => {
@@ -68,6 +62,13 @@ async function getMemberAccounts(): Promise<MemberWithAccounts[]> {
 
     const memberIds = members.map(m => m.id);
 
+    // Fetch all relevant transactions for all members at once
+    const { data: transactions, error: transactionsError } = await supabase
+        .from('transactions')
+        .select('member_id, type, amount')
+        .in('member_id', memberIds)
+        .in('type', ['Savings Deposit', 'Loan Repayment', 'Share Purchase', 'Loan Disbursement', 'Withdrawal']);
+
     const { data: savings, error: savingsError } = await supabase
         .from('savings')
         .select(`
@@ -87,22 +88,38 @@ async function getMemberAccounts(): Promise<MemberWithAccounts[]> {
         .in('member_id', memberIds)
         .in('status', ['Active', 'Pending']);
     
-    if (savingsError || loansError) {
-        console.error({ savingsError, loansError });
+    if (savingsError || loansError || transactionsError) {
+        console.error({ savingsError, loansError, transactionsError });
     }
 
     const membersMap = new Map<string, MemberWithAccounts>();
+
+    // Calculate current account balances from transactions
+    const currentBalances = new Map<string, number>();
+    if (transactions) {
+        for (const t of transactions) {
+            const currentBalance = currentBalances.get(t.member_id) || 0;
+            if (t.type === 'Savings Deposit' || t.type === 'Share Purchase' || t.type === 'Loan Repayment') {
+                // These are credits to the current account before being allocated
+                currentBalances.set(t.member_id, currentBalance + t.amount);
+            } else if (t.type === 'Loan Disbursement' || t.type === 'Withdrawal') {
+                 // These are debits from the current account
+                currentBalances.set(t.member_id, currentBalance - t.amount);
+            }
+        }
+    }
+
+
     for (const member of members) {
         membersMap.set(member.id, {
             id: member.id,
             name: member.name,
             photo_url: member.photo_url,
             accounts: [
-                // The primary member account number is treated as a 'Current' or general savings account
                  {
                     account_number: member.account_number,
                     type: 'Current',
-                    balance: 0, // This would require fetching transactions to calculate balance
+                    balance: currentBalances.get(member.id) || 0,
                     scheme_name: 'Primary Account'
                 }
             ]
@@ -120,7 +137,6 @@ async function getMemberAccounts(): Promise<MemberWithAccounts[]> {
                     existingAccount.balance += saving.amount;
                 } else {
                      member.accounts.push({
-                        // A member has one primary account number. Individual saving schemes don't get new numbers.
                         account_number: member.accounts[0]?.account_number || null,
                         type: accountType,
                         balance: saving.amount,
@@ -172,9 +188,9 @@ function AccountsTable({ members }: { members: MemberWithAccounts[] }) {
                     ) : (
                         members.map(member => (
                             member.accounts.map((account, index) => (
-                                <TableRow key={`${member.id}-${account.scheme_name}`}>
+                                <TableRow key={`${member.id}-${account.scheme_name}-${account.type}`}>
                                     {index === 0 ? (
-                                        <TableCell rowSpan={member.accounts.length} className="font-medium align-top">
+                                        <TableCell rowSpan={member.accounts.length} className="font-medium align-top py-4">
                                             <div className="flex items-center gap-3">
                                                 <Avatar className="hidden h-9 w-9 sm:flex">
                                                     {member.photo_url && <AvatarImage src={member.photo_url} alt={member.name} />}
@@ -190,7 +206,8 @@ function AccountsTable({ members }: { members: MemberWithAccounts[] }) {
                                     <TableCell>
                                          <Badge variant={
                                             account.type === 'Loan' ? 'destructive' :
-                                            account.type === 'LTD' ? 'outline' : 'secondary'
+                                            account.type === 'LTD' ? 'outline' : 
+                                            account.type === 'Current' ? 'default' : 'secondary'
                                          }>
                                             {account.type}
                                         </Badge>
@@ -210,7 +227,8 @@ function AccountsTable({ members }: { members: MemberWithAccounts[] }) {
 export default async function AccountsPage() {
     const allMembersWithAccounts = await getMemberAccounts();
 
-    const filterAccounts = (type: Account['type']) => {
+    const filterAccounts = (type: Account['type'] | 'All') => {
+        if (type === 'All') return allMembersWithAccounts;
         return allMembersWithAccounts
             .map(member => ({
                 ...member,
@@ -240,7 +258,7 @@ export default async function AccountsPage() {
                 <TabsTrigger value="loan">Loans</TabsTrigger>
             </TabsList>
             <TabsContent value="all">
-                <AccountsTable members={allMembersWithAccounts} />
+                <AccountsTable members={filterAccounts('All')} />
             </TabsContent>
             <TabsContent value="saving">
                 <AccountsTable members={savingAccounts} />
@@ -259,4 +277,3 @@ export default async function AccountsPage() {
     </main>
   );
 }
-

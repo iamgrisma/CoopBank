@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/table"
 import { createSupabaseServerClient } from "@/lib/supabase-server"
 import { format } from "date-fns"
-import Link from "next/link";
 import { formatCurrency } from "@/lib/utils";
 
 async function getJournalEntries() {
@@ -84,8 +83,8 @@ export default async function JournalsPage() {
                                 </TableRow>
                             ) : (
                                 entries.map(entry => (
-                                    <React.Fragment key={entry.id}>
-                                        <TableRow className="bg-muted/50">
+                                    <>
+                                        <TableRow key={entry.id} className="bg-muted/50">
                                             <TableCell className="font-semibold">
                                                 {format(new Date(entry.date), "do MMM, yyyy")}
                                             </TableCell>
@@ -105,7 +104,7 @@ export default async function JournalsPage() {
                                                 </TableCell>
                                             </TableRow>
                                         ))}
-                                    </React.Fragment>
+                                    </>
                                 ))
                             )}
                         </TableBody>

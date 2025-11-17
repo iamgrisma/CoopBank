@@ -40,6 +40,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { ScrollArea } from "../ui/scroll-area";
 
 type Member = {
   id: string;
@@ -52,9 +53,6 @@ type Member = {
   nominee_name: string | null;
   nominee_relationship: string | null;
   photo_url: string | null;
-  province_code: string | null;
-  district_code: string | null;
-  local_level_code: string | null;
   identification_type: string | null;
   identification_number: string | null;
 };
@@ -159,177 +157,181 @@ export function EditMember({ member }: { member: Member }) {
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="grid grid-cols-2 gap-4">
-                <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                        <Input {...field} value={field.value || ''} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Phone</FormLabel>
-                    <FormControl>
-                        <Input {...field} value={field.value || ''} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-            </div>
-            <FormField
-              control={form.control}
-              name="address"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Address</FormLabel>
-                  <FormControl>
-                    <Input {...field} value={field.value || ''} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="grid grid-cols-2 gap-4">
-             <FormField
-              control={form.control}
-              name="join_date"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Join Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button variant="outline" className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                          {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus/>
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="dob"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Date of Birth</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button variant="outline" className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                          {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus/>
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            </div>
-             <div className="grid grid-cols-2 gap-4">
-               <FormField
-                control={form.control}
-                name="identification_type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>ID Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select ID Type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="CITIZENSHIP">Citizenship</SelectItem>
-                        <SelectItem value="NATIONAL_ID">National ID</SelectItem>
-                        <SelectItem value="PASSPORT">Passport</SelectItem>
-                        <SelectItem value="LICENSE">License</SelectItem>
-                        <SelectItem value="PAN">PAN</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-               <FormField
-                control={form.control}
-                name="identification_number"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>ID Number</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter ID number" {...field} value={field.value || ""} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-                <FormField
-                control={form.control}
-                name="nominee_name"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Nominee Name</FormLabel>
-                    <FormControl>
-                        <Input {...field} value={field.value || ""} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                <FormField
-                control={form.control}
-                name="nominee_relationship"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Nominee Relationship</FormLabel>
-                    <FormControl>
-                        <Input {...field} value={field.value || ""} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-            </div>
-            <DialogFooter>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+             <ScrollArea className="h-[70vh] p-4">
+                 <div className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl>
+                                <Input {...field} value={field.value || ''} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={form.control}
+                        name="phone"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Phone</FormLabel>
+                            <FormControl>
+                                <Input {...field} value={field.value || ''} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                    </div>
+                    <FormField
+                      control={form.control}
+                      name="address"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Address</FormLabel>
+                          <FormControl>
+                            <Input {...field} value={field.value || ''} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="grid grid-cols-2 gap-4">
+                     <FormField
+                      control={form.control}
+                      name="join_date"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Join Date</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button variant="outline" className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                  {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus/>
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                     <FormField
+                      control={form.control}
+                      name="dob"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Date of Birth</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button variant="outline" className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                  {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus/>
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    </div>
+                     <div className="grid grid-cols-2 gap-4">
+                       <FormField
+                        control={form.control}
+                        name="identification_type"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>ID Type</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select ID Type" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="CITIZENSHIP">Citizenship</SelectItem>
+                                <SelectItem value="NATIONAL_ID">National ID</SelectItem>
+                                <SelectItem value="PASSPORT">Passport</SelectItem>
+                                <SelectItem value="LICENSE">License</SelectItem>
+                                <SelectItem value="PAN">PAN</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                       <FormField
+                        control={form.control}
+                        name="identification_number"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>ID Number</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter ID number" {...field} value={field.value || ""} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                        control={form.control}
+                        name="nominee_name"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Nominee Name</FormLabel>
+                            <FormControl>
+                                <Input {...field} value={field.value || ""} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={form.control}
+                        name="nominee_relationship"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Nominee Relationship</FormLabel>
+                            <FormControl>
+                                <Input {...field} value={field.value || ""} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                    </div>
+                </div>
+            </ScrollArea>
+            <DialogFooter className="pt-4">
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? "Saving..." : "Save Changes"}
               </Button>
@@ -340,5 +342,3 @@ export function EditMember({ member }: { member: Member }) {
     </Dialog>
   );
 }
-
-    

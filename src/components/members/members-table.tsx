@@ -25,11 +25,11 @@ type Member = {
   nominee_name: string | null;
   nominee_relationship: string | null;
   photo_url: string | null;
-  province_code: string | null;
-  district_code: string | null;
-  local_level_code: string | null;
   identification_type: string | null;
   identification_number: string | null;
+  province?: { name: string } | null;
+  district?: { name: string } | null;
+  local_level?: { name: string } | null;
 };
 
 const getInitials = (name: string | undefined) => {
@@ -39,6 +39,17 @@ const getInitials = (name: string | undefined) => {
     return names[0][0] + names[names.length - 1][0];
   }
   return name.substring(0, 2);
+}
+
+const formatFullAddress = (member: Member) => {
+    const parts = [
+        member.address,
+        member.local_level?.name,
+        member.district?.name,
+        member.province?.name
+    ].filter(Boolean); // Filter out null/undefined parts
+    
+    return parts.join(', ') || 'N/A';
 }
 
 
@@ -87,7 +98,7 @@ export function MembersTable({ members }: { members: Member[] }) {
                     <span className="text-muted-foreground">{member.phone}</span>
                   </div>
                 </TableCell>
-                <TableCell className="hidden sm:table-cell">{member.address}</TableCell>
+                <TableCell className="hidden sm:table-cell">{formatFullAddress(member)}</TableCell>
                 <TableCell className="hidden lg:table-cell">
                   {format(new Date(member.join_date), "yyyy-MM-dd")}
                 </TableCell>
@@ -102,5 +113,3 @@ export function MembersTable({ members }: { members: Member[] }) {
     </div>
   )
 }
-
-    

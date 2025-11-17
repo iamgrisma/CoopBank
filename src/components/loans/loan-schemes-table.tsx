@@ -8,7 +8,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { format } from "date-fns"
 import { Badge } from "../ui/badge";
 
 type LoanScheme = {
@@ -20,14 +19,6 @@ type LoanScheme = {
   repayment_frequency: string;
   is_active: boolean;
 };
-
-const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'NPR',
-      minimumFractionDigits: 2,
-    }).format(amount).replace('NPR', 'रु');
-}
 
 
 export function LoanSchemesTable({ schemes }: { schemes: LoanScheme[] }) {
@@ -70,5 +61,3 @@ export function LoanSchemesTable({ schemes }: { schemes: LoanScheme[] }) {
     </div>
   )
 }
-
-    

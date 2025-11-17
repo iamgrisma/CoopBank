@@ -1,5 +1,4 @@
 
-
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -18,11 +17,17 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { LoanDetailsDialog } from "@/components/loans/loan-details-dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { calculateAccruedInterestForAllSavings } from "@/lib/saving-utils";
+import { formatCurrency } from "@/lib/utils";
 
 async function getMember(supabase: SupabaseClient, id: string) {
   const { data: member, error } = await supabase
     .from("members")
-    .select(`*`)
+    .select(`
+        *,
+        province:province_code(name),
+        district:district_code(name),
+        local_level:local_level_code(name)
+    `)
     .eq("id", id)
     .single();
   
@@ -124,14 +129,6 @@ const getInitials = (name: string | undefined) => {
   }
   return name.substring(0, 2);
 }
-
-const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'NPR',
-      minimumFractionDigits: 2,
-    }).format(amount).replace('NPR', 'रु');
-  }
   
 const formatAccountNumber = (accountNumber: string | null) => {
     if (!accountNumber) return 'N/A';
@@ -145,18 +142,19 @@ const formatAccountNumber = (accountNumber: string | null) => {
 
 export default async function MemberProfilePage({ params }: { params: { id: string } }) {
   const supabase = createSupabaseServerClient();
-  
   const member = await getMember(supabase, params.id);
   
   if (!member) {
       notFound();
   }
-  
-  const shares = await getShares(supabase, params.id);
-  const savings = await getSavings(supabase, params.id);
-  const loans = await getLoans(supabase, params.id);
-  const loanSchemes = await getLoanSchemes(supabase);
-  const savingSchemes = await getSavingSchemes(supabase);
+
+  const [shares, savings, loans, loanSchemes, savingSchemes] = await Promise.all([
+    getShares(supabase, params.id),
+    getSavings(supabase, params.id),
+    getLoans(supabase, params.id),
+    getLoanSchemes(supabase),
+    getSavingSchemes(supabase)
+  ]);
 
   const totalSharesValue = shares.reduce((acc, share) => acc + (share.number_of_shares * share.face_value), 0);
   const totalSharesCount = shares.reduce((acc, share) => acc + share.number_of_shares, 0);
@@ -402,8 +400,16 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                 <TabsContent value="kyc">
                      <Card>
                         <CardHeader>
-                            <CardTitle>KYC Details</CardTitle>
-                             <p className="text-muted-foreground">Detailed member information for compliance.</p>
+                            <div className="flex items-center gap-4">
+                                <Avatar className="h-16 w-16">
+                                    {member.photo_url && <AvatarImage src={member.photo_url} alt={member.name || 'member photo'} />}
+                                    <AvatarFallback className="text-2xl">{getInitials(member.name)}</AvatarFallback>
+                                </Avatar>
+                                <div className="grid gap-1">
+                                    <CardTitle>KYC Details</CardTitle>
+                                    <p className="text-muted-foreground">Detailed member information for compliance.</p>
+                                </div>
+                            </div>
                         </CardHeader>
                         <CardContent>
                              <div className="grid gap-6">
@@ -452,5 +458,3 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
     </main>
   );
 }
-
-    

@@ -11,11 +11,11 @@ export const formatCurrency = (amount: number) => {
         style: 'currency',
         currency: 'NPR',
         minimumFractionDigits: 2,
-      }).format(0).replace('NPR', 'रु');
+      }).format(0).replace(/NPR/g, 'रु');
     }
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'NPR',
       minimumFractionDigits: 2,
-    }).format(amount).replace('NPR', 'रु');
+    }).format(amount).replace(/NPR/g, 'रु');
 }

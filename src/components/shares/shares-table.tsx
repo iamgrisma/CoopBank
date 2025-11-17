@@ -10,6 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { format } from "date-fns"
+import { formatCurrency } from "@/lib/utils";
 
 type Share = {
   id: string;
@@ -23,13 +24,6 @@ type Share = {
   } | null;
 };
 
-const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'NPR',
-      minimumFractionDigits: 2,
-    }).format(amount).replace('NPR', 'रु');
-  }
 
 export function SharesTable({ shares }: { shares: Share[] }) {
   return (
@@ -79,5 +73,3 @@ export function SharesTable({ shares }: { shares: Share[] }) {
     </div>
   )
 }
-
-    
