@@ -413,7 +413,3 @@ export function LoanDetailsDialog({ loan, allLoanSchemes, trigger }: LoanDetails
     </Dialog>
   );
 }
-
-    
-
-    
