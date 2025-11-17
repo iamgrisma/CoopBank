@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { LoanDetailsDialog } from "@/components/loans/loan-details-dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { calculateAccruedInterestForAllSavings } from "@/lib/saving-utils";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, cn } from "@/lib/utils";
 import { AccountStatement } from "@/components/members/account-statement";
 import { generateDynamicAmortizationSchedule, Repayment } from "@/lib/loan-utils";
 import { useState, useEffect } from 'react';
@@ -34,6 +34,8 @@ type Member = {
   identification_type: string | null;
   identification_number: string | null;
   identification_issue_date: string | null;
+  kyc_document_url: string | null;
+  account_number: string | null;
 };
 type Share = any;
 type Saving = any;
