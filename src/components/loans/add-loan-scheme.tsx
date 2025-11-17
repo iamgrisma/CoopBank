@@ -362,5 +362,3 @@ export function AddLoanScheme({ triggerButton }: AddLoanSchemeProps) {
     </Dialog>
   );
 }
-
-    
