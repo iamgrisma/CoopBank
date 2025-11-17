@@ -127,17 +127,12 @@ export function AddMember() {
         const provincesData = await getProvinces();
         setProvinces(provincesData);
         
-        // Initial fetch for districts based on default province
-        if (form.getValues("province_code")) {
-            const districtsData = await getDistricts(Number(form.getValues("province_code")));
-            setDistricts(districtsData);
-        }
+        // Initial fetch for districts and local levels based on defaults
+        const districtsData = await getDistricts(Number(form.getValues("province_code")));
+        setDistricts(districtsData);
 
-        // Initial fetch for local levels based on default district
-        if (form.getValues("district_code")) {
-             const localLevelsData = await getLocalLevels(Number(form.getValues("district_code")));
-             setLocalLevels(localLevelsData);
-        }
+        const localLevelsData = await getLocalLevels(Number(form.getValues("district_code")));
+        setLocalLevels(localLevelsData);
     };
     if (open) {
         fetchData();
@@ -149,30 +144,34 @@ export function AddMember() {
         if (watchProvince) {
             const districtsData = await getDistricts(Number(watchProvince));
             setDistricts(districtsData);
-            form.setValue("district_code", ""); // Reset district on province change
-            form.setValue("local_level_code", ""); // Reset local level
+            form.setValue("district_code", "");
+            form.setValue("local_level_code", "");
+            setLocalLevels([]);
         }
     }
-    fetchDistrictsForProvince();
+    if(form.formState.isDirty) {
+        fetchDistrictsForProvince();
+    }
   }, [watchProvince, form]);
 
    React.useEffect(() => {
     const fetchLocalLevelsForDistrict = async () => {
         if (watchDistrict) {
-            // Per requirement, only Sindhuli (ID 34) has local levels
             if (watchDistrict === "34") {
                 const localLevelsData = await getLocalLevels(Number(watchDistrict));
                 setLocalLevels(localLevelsData);
             } else {
                 setLocalLevels([]);
-                form.setValue("local_level_code", "00"); // Set to '00' if not Sindhuli
+                form.setValue("local_level_code", "00");
             }
         } else {
              setLocalLevels([]);
              form.setValue("local_level_code", "");
         }
     }
-    fetchLocalLevelsForDistrict();
+    if (form.formState.isDirty) {
+        fetchLocalLevelsForDistrict();
+    }
   }, [watchDistrict, form]);
 
 
@@ -184,8 +183,9 @@ export function AddMember() {
         
         const savingTypeCode = "01"; 
 
-        const districtCodeForAcc = districts.find(d => d.id === Number(values.district_code))?.id.toString().padStart(2, '0') || '00';
-        const localLevelCodeForAcc = values.local_level_code === '00' ? '00' : localLevels.find(l => l.id === Number(values.local_level_code))?.id.toString().slice(-2) || '00';
+        const allDistricts = await getDistricts();
+        const districtCodeForAcc = allDistricts.find(d => d.id === Number(values.district_code))?.id.toString().padStart(2, '0') || '00';
+        const localLevelCodeForAcc = values.local_level_code === '00' ? '00' : (await getLocalLevels(parseInt(values.district_code, 10))).find(l => l.id === Number(values.local_level_code))?.id.toString().slice(-2) || '00';
 
 
         const fullAccountNumber = `${branchCode}${districtCodeForAcc}${localLevelCodeForAcc}${savingTypeCode}${nextAccNumPart}`;
