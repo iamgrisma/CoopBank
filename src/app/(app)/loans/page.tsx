@@ -1,69 +1,62 @@
 
+"use client";
+
+import React, { useState, useEffect } from 'react';
 import { AddLoan } from "@/components/loans/add-loan";
 import { LoansTable } from "@/components/loans/loans-table";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { PlusCircle, RefreshCcw } from "lucide-react";
+import { supabase } from "@/lib/supabase-client";
 import { SyncLoanStatuses } from "@/components/loans/sync-loan-statuses";
+import { Skeleton } from '@/components/ui/skeleton';
 
-async function getLoans() {
-  const supabase = createSupabaseServerClient();
-  const { data: loans, error } = await supabase
-    .from('loans')
-    .select(`
-      *,
-      members (
-        id,
-        name
-      ),
-      loan_schemes (
-        id,
-        name,
-        repayment_frequency,
-        grace_period_months
-      )
-    `)
-    .order('disbursement_date', { ascending: false });
-
-  if (error) {
-    console.error('Error fetching loans:', error);
-    return [];
-  }
-  return loans;
+function LoansPageSkeleton() {
+    return (
+        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+            <div className="flex items-center">
+                <Skeleton className="h-8 w-40" />
+                <div className="ml-auto flex items-center gap-2">
+                    <Skeleton className="h-10 w-44" />
+                    <Skeleton className="h-10 w-32" />
+                </div>
+            </div>
+             <div className="rounded-lg border shadow-sm overflow-hidden">
+                <Skeleton className="h-96 w-full" />
+            </div>
+        </main>
+    );
 }
 
-async function getMembers() {
-  const supabase = createSupabaseServerClient();
-  const { data: members, error } = await supabase
-    .from('members')
-    .select('id, name')
-    .order('name', { ascending: true });
+export default function LoansPage() {
+  const [loans, setLoans] = useState<any[]>([]);
+  const [members, setMembers] = useState<any[]>([]);
+  const [loanSchemes, setLoanSchemes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  if (error) {
-    console.error('Error fetching members:', error);
-    return [];
-  }
-  return members;
-}
+  useEffect(() => {
+    async function getPageData() {
+        setLoading(true);
+        const [loansRes, membersRes, loanSchemesRes] = await Promise.all([
+            supabase.from('loans').select(`*, members (id, name), loan_schemes (id, name, repayment_frequency, grace_period_months)`).order('disbursement_date', { ascending: false }),
+            supabase.from('members').select('id, name').order('name', { ascending: true }),
+            supabase.from('loan_schemes').select('*').order('name', { ascending: true })
+        ]);
+        
+        if (loansRes.error) console.error('Error fetching loans:', loansRes.error);
+        if (membersRes.error) console.error('Error fetching members:', membersRes.error);
+        if (loanSchemesRes.error) console.error('Error fetching loan schemes:', loanSchemesRes.error);
 
-async function getLoanSchemes() {
-    const supabase = createSupabaseServerClient();
-    const { data: schemes, error } = await supabase
-        .from('loan_schemes')
-        .select('*')
-        .order('name', { ascending: true });
-    
-    if (error) {
-        console.error('Error fetching loan schemes:', error);
-        return [];
+        setLoans(loansRes.data || []);
+        setMembers(membersRes.data || []);
+        setLoanSchemes(loanSchemesRes.data || []);
+        setLoading(false);
     }
-    return schemes;
-}
+    getPageData();
+  }, []);
 
-export default async function LoansPage() {
-  const loans = await getLoans();
-  const members = await getMembers();
-  const loanSchemes = await getLoanSchemes();
+  if (loading) {
+    return <LoansPageSkeleton />;
+  }
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
@@ -87,5 +80,3 @@ export default async function LoansPage() {
     </main>
   );
 }
-
-    

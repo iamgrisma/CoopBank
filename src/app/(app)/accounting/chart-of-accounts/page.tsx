@@ -1,4 +1,7 @@
 
+"use client";
+
+import React, { useState, useEffect } from 'react';
 import {
     Card,
     CardContent,
@@ -14,36 +17,76 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
-import { createSupabaseServerClient } from "@/lib/supabase-server"
+import { supabase } from "@/lib/supabase-client";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from '@/components/ui/skeleton';
 
-async function getChartOfAccounts() {
-    const supabase = createSupabaseServerClient();
-    const { data, error } = await supabase
-        .from('chart_of_accounts')
-        .select('*')
-        .order('code', { ascending: true });
-
-    if (error) {
-        console.error("Error fetching chart of accounts:", error);
-        // Returning a default list in case the table doesn't exist yet
-        return [
-            { code: 1010, name: 'Cash', type: 'Asset' },
-            { code: 1100, name: 'Loans Receivable', type: 'Asset' },
-            { code: 2010, name: 'Savings Deposits', type: 'Liability' },
-            { code: 2100, name: 'Interest Payable', type: 'Liability' },
-            { code: 3010, name: 'Share Capital', type: 'Equity' },
-            { code: 3100, name: 'Retained Earnings', type: 'Equity' },
-            { code: 4010, name: 'Interest Income from Loans', type: 'Revenue' },
-            { code: 4020, name: 'Penalty Income', type: 'Revenue' },
-            { code: 5010, name: 'Interest Expense on Savings', type: 'Expense' },
-        ];
-    }
-    return data;
+function ChartOfAccountsSkeleton() {
+    return (
+        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+            <div className="flex items-center">
+                <Skeleton className="h-8 w-64" />
+            </div>
+            <Card>
+                <CardHeader>
+                    <Skeleton className="h-7 w-32" />
+                    <Skeleton className="h-4 w-full max-w-sm" />
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-8">
+                        {[...Array(5)].map((_, i) => (
+                            <div key={i}>
+                                <Skeleton className="h-6 w-24 mb-2" />
+                                <div className="rounded-lg border shadow-sm overflow-hidden">
+                                     <Skeleton className="h-48 w-full" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+        </main>
+    );
 }
 
-export default async function ChartOfAccountsPage() {
-    const accounts = await getChartOfAccounts();
+
+export default function ChartOfAccountsPage() {
+    const [accounts, setAccounts] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        async function getChartOfAccounts() {
+            setLoading(true);
+            const { data, error } = await supabase
+                .from('chart_of_accounts')
+                .select('*')
+                .order('code', { ascending: true });
+
+            if (error) {
+                console.error("Error fetching chart of accounts:", error);
+                // Providing a default list in case the table doesn't exist yet
+                setAccounts([
+                    { code: 1010, name: 'Cash', type: 'Asset' },
+                    { code: 1100, name: 'Loans Receivable', type: 'Asset' },
+                    { code: 2010, name: 'Savings Deposits', type: 'Liability' },
+                    { code: 2100, name: 'Interest Payable', type: 'Liability' },
+                    { code: 3010, name: 'Share Capital', type: 'Equity' },
+                    { code: 3100, name: 'Retained Earnings', type: 'Equity' },
+                    { code: 4010, name: 'Interest Income from Loans', type: 'Revenue' },
+                    { code: 4020, name: 'Penalty Income', type: 'Revenue' },
+                    { code: 5010, name: 'Interest Expense on Savings', type: 'Expense' },
+                ]);
+            } else {
+                 setAccounts(data);
+            }
+            setLoading(false);
+        }
+        getChartOfAccounts();
+    }, []);
+
+    if (loading) {
+        return <ChartOfAccountsSkeleton />;
+    }
 
     const accountsByType = accounts.reduce((acc, account) => {
         const type = account.type || 'Uncategorized';

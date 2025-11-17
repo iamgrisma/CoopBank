@@ -1,26 +1,57 @@
+
+"use client";
+
+import React, { useState, useEffect } from 'react';
 import { SavingSchemesTable } from "@/components/savings/saving-schemes-table";
 import { AddSavingScheme } from "@/components/savings/add-saving-scheme";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { supabase } from "@/lib/supabase-client";
 import { DefaultSavingScheme } from "@/components/savings/default-saving-scheme";
+import { Skeleton } from '@/components/ui/skeleton';
 
-async function getSavingSchemes() {
-    const supabase = createSupabaseServerClient();
-    const { data: schemes, error } = await supabase
-        .from('saving_schemes')
-        .select('*')
-        .order('name', { ascending: true });
-    
-    if (error) {
-        console.error('Error fetching saving schemes:', error.message);
-        return [];
-    }
-    return schemes || [];
+function SchemesPageSkeleton() {
+    return (
+        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+            <div className="flex items-center">
+                <Skeleton className="h-8 w-48" />
+                <div className="ml-auto flex items-center gap-2">
+                    <Skeleton className="h-10 w-44" />
+                    <Skeleton className="h-10 w-36" />
+                </div>
+            </div>
+            <div className="rounded-lg border shadow-sm overflow-hidden">
+                <Skeleton className="h-96 w-full" />
+            </div>
+        </main>
+    );
 }
 
-export default async function SavingSchemesPage() {
-  const savingSchemes = await getSavingSchemes();
+export default function SavingSchemesPage() {
+  const [savingSchemes, setSavingSchemes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function getSavingSchemes() {
+        setLoading(true);
+        const { data, error } = await supabase
+            .from('saving_schemes')
+            .select('*')
+            .order('name', { ascending: true });
+        
+        if (error) {
+            console.error('Error fetching saving schemes:', error.message);
+        } else {
+            setSavingSchemes(data || []);
+        }
+        setLoading(false);
+    }
+    getSavingSchemes();
+  }, []);
+
+  if (loading) {
+      return <SchemesPageSkeleton />;
+  }
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
