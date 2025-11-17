@@ -22,12 +22,7 @@ import { formatCurrency } from "@/lib/utils";
 async function getMember(supabase: SupabaseClient, id: string) {
   const { data: member, error } = await supabase
     .from("members")
-    .select(`
-        *,
-        province:province_code(name),
-        district:district_code(name),
-        local_level:local_level_code(name)
-    `)
+    .select(`*`)
     .eq("id", id)
     .single();
   
@@ -458,3 +453,5 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
     </main>
   );
 }
+
+    

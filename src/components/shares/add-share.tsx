@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -254,8 +255,8 @@ export function AddShare({ members, defaultMember, triggerButton }: AddShareProp
                                   value={member.name}
                                   key={member.id}
                                   onSelect={() => {
-                                    form.setValue("member_id", member.id)
-                                    setPopoverOpen(false)
+                                    form.setValue("member_id", member.id);
+                                    setPopoverOpen(false);
                                   }}
                                 >
                                   <Check
@@ -370,3 +371,5 @@ export function AddShare({ members, defaultMember, triggerButton }: AddShareProp
     </Dialog>
   );
 }
+
+    
