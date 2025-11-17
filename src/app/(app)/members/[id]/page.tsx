@@ -22,7 +22,7 @@ import { calculateAccruedInterestForAllSavings } from "@/lib/saving-utils";
 async function getMember(supabase: SupabaseClient, id: string) {
   const { data: member, error } = await supabase
     .from("members")
-    .select("*, district:districts!district_code(name), province:provinces!province_code(name), local_level:local_levels!local_level_code(name)")
+    .select("*, province:provinces!province_code(name), district:districts!district_code(name), local_level:local_levels!local_level_code(name)")
     .eq("id", id)
     .single();
   
@@ -459,5 +459,7 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
     </main>
   );
 }
+
+    
 
     
