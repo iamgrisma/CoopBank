@@ -143,35 +143,24 @@ export const generateDynamicAmortizationSchedule = (
   const sortedRepayments = [...repayments].sort((a, b) => new Date(a.payment_date).getTime() - new Date(b.payment_date).getTime());
   
   sortedRepayments.forEach(repayment => {
-      const paymentDate = new Date(repayment.payment_date);
-      
       let amountToAllocate = repayment.amount_paid;
 
-      const dueInstallments = schedule
-        .filter(entry => entry.paymentDate <= paymentDate && entry.status !== 'PAID')
-        .sort((a, b) => a.paymentDate.getTime() - b.paymentDate.getTime());
+      // This logic is simplified as we trust the DB values for historical payments.
+      // We just need to sum them up for the correct installments.
+      // A more complex logic would re-run allocation for each past payment.
+      const installment = schedule.find(inst => {
+          const instDate = new Date(inst.paymentDate);
+          instDate.setHours(0,0,0,0);
+          const payDate = new Date(repayment.payment_date);
+          payDate.setHours(0,0,0,0);
+          return instDate >= payDate;
+      }) || schedule[schedule.length - 1]; // fallback to last installment
 
-      for (const installment of dueInstallments) {
-        if(amountToAllocate <= 0) break;
-
-        // Note: For historical payments from DB, penal interest and penalty are already calculated and stored.
-        // We just need to track what was paid.
-        const principalToPay = Math.min(amountToAllocate, repayment.principal_paid);
-        installment.principalPaid += principalToPay;
-        amountToAllocate -= principalToPay;
-
-        const interestToPay = Math.min(amountToAllocate, repayment.interest_paid);
-        installment.interestPaid += interestToPay;
-        amountToAllocate -= interestToPay;
-
-        const penalInterestToPay = Math.min(amountToAllocate, repayment.penal_interest_paid);
-        installment.penalInterestPaid += penalInterestToPay;
-        amountToAllocate -= penalInterestToPay;
-        
-        const penaltyToPay = Math.min(amountToAllocate, repayment.penalty_paid);
-        installment.penaltyPaid += penaltyToPay;
-        amountToAllocate -= penaltyToPay;
-      }
+      // Approximate allocation for past payments for display
+      installment.principalPaid += repayment.principal_paid;
+      installment.interestPaid += repayment.interest_paid;
+      installment.penalInterestPaid += repayment.penal_interest_paid;
+      installment.penaltyPaid += repayment.penalty_paid;
   });
 
 
@@ -263,7 +252,6 @@ export const allocatePayment = (
     waiveFine: boolean
 ) => {
     let remainingAmount = paymentAmount;
-    
     const allocation = {
         principal: 0,
         interest: 0, 
@@ -274,46 +262,36 @@ export const allocatePayment = (
 
     const sortedDues = [...dueInstallments].sort((a,b) => a.paymentDate.getTime() - b.paymentDate.getTime());
 
+    const payFrom = (category: 'fine' | 'penalInterest' | 'interest' | 'principal', amountDue: number): number => {
+        if (remainingAmount <= 0 || amountDue <= 0) {
+            return 0;
+        }
+        const amountToPay = Math.min(remainingAmount, amountDue);
+        allocation[category] += amountToPay;
+        remainingAmount -= amountToPay;
+        return amountToPay;
+    };
+
     for (const installment of sortedDues) {
         if (remainingAmount <= 0) break;
 
         // 1. Pay Fine (if not waived)
         if (!waiveFine) {
-            const outstandingFine = installment.penalty - installment.penaltyPaid;
-            if (outstandingFine > 0) {
-                const amountToPay = Math.min(remainingAmount, outstandingFine);
-                allocation.fine += amountToPay;
-                remainingAmount -= amountToPay;
-                if (remainingAmount <= 0) break;
-            }
+            const outstandingFine = (installment.penalty - installment.penaltyPaid);
+            payFrom('fine', outstandingFine);
         }
         
         // 2. Pay Penal Interest
-        const outstandingPenalInterest = installment.penalInterest - installment.penalInterestPaid;
-        if (outstandingPenalInterest > 0) {
-            const amountToPay = Math.min(remainingAmount, outstandingPenalInterest);
-            allocation.penalInterest += amountToPay;
-            remainingAmount -= amountToPay;
-            if (remainingAmount <= 0) break;
-        }
+        const outstandingPenalInterest = (installment.penalInterest - installment.penalInterestPaid);
+        payFrom('penalInterest', outstandingPenalInterest);
         
         // 3. Pay Regular Interest
-        const outstandingInterest = installment.interest - installment.interestPaid;
-        if (outstandingInterest > 0) {
-            const amountToPay = Math.min(remainingAmount, outstandingInterest);
-            allocation.interest += amountToPay;
-            remainingAmount -= amountToPay;
-            if (remainingAmount <= 0) break;
-        }
+        const outstandingInterest = (installment.interest - installment.interestPaid);
+        payFrom('interest', outstandingInterest);
 
         // 4. Pay Principal
-        const outstandingPrincipal = installment.principal - installment.principalPaid;
-        if (outstandingPrincipal > 0) {
-            const amountToPay = Math.min(remainingAmount, outstandingPrincipal);
-            allocation.principal += amountToPay;
-            remainingAmount -= amountToPay;
-            if (remainingAmount <= 0) break;
-        }
+        const outstandingPrincipal = (installment.principal - installment.principalPaid);
+        payFrom('principal', outstandingPrincipal);
     }
 
     // Any leftover amount goes to savings
