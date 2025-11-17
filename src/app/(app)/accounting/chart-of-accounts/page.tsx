@@ -1,4 +1,5 @@
-import React from 'react';
+'use client';
+import React, { useState, useEffect } from 'react';
 import {
     Card,
     CardContent,
@@ -14,8 +15,9 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
-import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { supabase } from "@/lib/supabase-client";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from '@/components/ui/skeleton';
 
 type Account = {
     code: number;
@@ -23,7 +25,84 @@ type Account = {
     type: string;
 };
 
-function ChartOfAccountsClientPage({ accounts }: { accounts: Account[] }) {
+function ChartOfAccountsSkeleton() {
+    return (
+        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+            <div className="flex items-center">
+                <h1 className="font-semibold text-lg md:text-2xl">Chart of Accounts</h1>
+            </div>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Accounts</CardTitle>
+                    <CardDescription>
+                        The list of all financial accounts in the system.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-8">
+                        {[...Array(5)].map((_, i) => (
+                            <div key={i}>
+                                <Skeleton className="h-6 w-32 mb-2" />
+                                <div className="rounded-lg border shadow-sm p-4">
+                                    <div className="space-y-4">
+                                        {[...Array(3)].map((_, j) => (
+                                            <div key={j} className="grid grid-cols-3 gap-4">
+                                                <Skeleton className="h-4 w-1/4" />
+                                                <Skeleton className="h-4 w-3/4" />
+                                                <Skeleton className="h-6 w-20" />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+        </main>
+    );
+}
+
+export default function ChartOfAccountsPage() {
+    const [accounts, setAccounts] = useState<Account[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        async function getChartOfAccounts() {
+            setLoading(true);
+            const { data, error } = await supabase
+                .from('chart_of_accounts')
+                .select('*')
+                .order('code', { ascending: true });
+
+            let fetchedAccounts: Account[] = [];
+            if (error) {
+                console.error("Error fetching chart of accounts:", error);
+                // Providing a default list in case the table doesn't exist yet
+                fetchedAccounts = [
+                    { code: 1010, name: 'Cash', type: 'Asset' },
+                    { code: 1100, name: 'Loans Receivable', type: 'Asset' },
+                    { code: 2010, name: 'Savings Deposits', type: 'Liability' },
+                    { code: 2100, name: 'Interest Payable', type: 'Liability' },
+                    { code: 3010, name: 'Share Capital', type: 'Equity' },
+                    { code: 3100, name: 'Retained Earnings', type: 'Equity' },
+                    { code: 4010, name: 'Interest Income from Loans', type: 'Revenue' },
+                    { code: 4020, name: 'Penalty Income', type: 'Revenue' },
+                    { code: 5010, name: 'Interest Expense on Savings', type: 'Expense' },
+                ];
+            } else {
+                fetchedAccounts = data || [];
+            }
+            setAccounts(fetchedAccounts);
+            setLoading(false);
+        }
+        getChartOfAccounts();
+    }, []);
+
+    if (loading) {
+        return <ChartOfAccountsSkeleton />;
+    }
+
     const accountsByType = accounts.reduce((acc, account) => {
         const type = account.type || 'Uncategorized';
         if (!acc[type]) {
@@ -96,33 +175,4 @@ function ChartOfAccountsClientPage({ accounts }: { accounts: Account[] }) {
         </Card>
     </main>
   )
-}
-
-export default async function ChartOfAccountsPage() {
-    const supabase = createSupabaseServerClient();
-    const { data, error } = await supabase
-        .from('chart_of_accounts')
-        .select('*')
-        .order('code', { ascending: true });
-
-    let accounts: Account[] = [];
-    if (error) {
-        console.error("Error fetching chart of accounts:", error);
-        // Providing a default list in case the table doesn't exist yet
-        accounts = [
-            { code: 1010, name: 'Cash', type: 'Asset' },
-            { code: 1100, name: 'Loans Receivable', type: 'Asset' },
-            { code: 2010, name: 'Savings Deposits', type: 'Liability' },
-            { code: 2100, name: 'Interest Payable', type: 'Liability' },
-            { code: 3010, name: 'Share Capital', type: 'Equity' },
-            { code: 3100, name: 'Retained Earnings', type: 'Equity' },
-            { code: 4010, name: 'Interest Income from Loans', type: 'Revenue' },
-            { code: 4020, name: 'Penalty Income', type: 'Revenue' },
-            { code: 5010, name: 'Interest Expense on Savings', type: 'Expense' },
-        ];
-    } else {
-        accounts = data || [];
-    }
-
-    return <ChartOfAccountsClientPage accounts={accounts} />;
 }
