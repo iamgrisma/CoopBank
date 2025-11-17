@@ -43,6 +43,9 @@ const schemeFormSchema = z.object({
   type: z.string().min(1, "Please select a scheme type."),
   lock_in_period_years: z.coerce.number().int().min(0, "Lock-in period must be 0 or more.").optional(),
   is_active: z.boolean().default(true),
+}).refine(data => !(data.type === 'Current' && data.interest_rate !== 0), {
+    message: "Interest rate must be 0 for Current accounts.",
+    path: ["interest_rate"],
 });
 
 type SchemeFormValues = z.infer<typeof schemeFormSchema>;
@@ -75,6 +78,12 @@ export function AddSavingScheme({ triggerButton }: AddSavingSchemeProps) {
   });
 
   const watchType = form.watch("type");
+
+  React.useEffect(() => {
+    if (watchType === 'Current') {
+        form.setValue('interest_rate', 0);
+    }
+  }, [watchType, form]);
 
   const onSubmit = async (values: SchemeFormValues) => {
     setIsSubmitting(true);

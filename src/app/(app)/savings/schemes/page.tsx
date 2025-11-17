@@ -12,10 +12,10 @@ async function getSavingSchemes() {
         .order('name', { ascending: true });
     
     if (error) {
-        console.error('Error fetching saving schemes:', error);
+        console.error('Error fetching saving schemes:', error.message);
         return [];
     }
-    return schemes;
+    return schemes || [];
 }
 
 export default async function SavingSchemesPage() {

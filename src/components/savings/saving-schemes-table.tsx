@@ -33,7 +33,7 @@ export function SavingSchemesTable({ schemes }: { schemes: SavingScheme[] }) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {schemes.length === 0 ? (
+          {!schemes || schemes.length === 0 ? (
             <TableRow>
                 <TableCell colSpan={5} className="h-24 text-center">
                     No saving schemes found.
@@ -44,7 +44,7 @@ export function SavingSchemesTable({ schemes }: { schemes: SavingScheme[] }) {
               <TableRow key={scheme.id}>
                 <TableCell className="font-medium">{scheme.name}</TableCell>
                 <TableCell>
-                    <Badge variant={scheme.type === 'LTD' ? 'destructive' : 'secondary'}>{scheme.type}</Badge>
+                    <Badge variant={scheme.type === 'LTD' ? 'destructive' : scheme.type === 'Current' ? 'outline' : 'secondary'}>{scheme.type}</Badge>
                 </TableCell>
                 <TableCell>{scheme.interest_rate}%</TableCell>
                 <TableCell>{scheme.lock_in_period_years ? `${scheme.lock_in_period_years} years` : 'N/A'}</TableCell>
