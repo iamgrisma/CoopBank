@@ -20,19 +20,19 @@ export function FinancialStatements() {
       </CardHeader>
       <CardContent className="grid gap-2">
         <Button asChild variant="outline" className="justify-between">
-          <Link href="#">
+          <Link href="/reports/trial-balance">
             <span>Trial Balance</span>
             <ArrowRight className="h-4 w-4" />
           </Link>
         </Button>
         <Button asChild variant="outline" className="justify-between">
-          <Link href="#">
+          <Link href="/reports/profit-and-loss">
             <span>Profit &amp; Loss</span>
             <ArrowRight className="h-4 w-4" />
           </Link>
         </Button>
         <Button asChild variant="outline" className="justify-between">
-          <Link href="#">
+          <Link href="/reports/balance-sheet">
             <span>Balance Sheet</span>
             <ArrowRight className="h-4 w-4" />
           </Link>

@@ -71,7 +71,17 @@ const mainNavLinks: NavItem[] = [
         { href: "/accounting/chart-of-accounts", label: "Chart of Accounts" },
     ]
   },
-  { href: "/reports", label: "Reports", icon: FilePieChart, paths: ["/reports"] },
+  { 
+    label: "Reports", 
+    icon: FilePieChart, 
+    paths: ["/reports", "/reports/trial-balance", "/reports/profit-and-loss", "/reports/balance-sheet"],
+    subItems: [
+        { href: "/reports", label: "Financial Summary" },
+        { href: "/reports/trial-balance", label: "Trial Balance" },
+        { href: "/reports/profit-and-loss", label: "Profit & Loss" },
+        { href: "/reports/balance-sheet", label: "Balance Sheet" },
+    ] 
+  },
 ];
 
 
@@ -101,8 +111,8 @@ const MainNav = ({ isMobile = false }: { isMobile?: boolean }) => {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
                         {item.subItems.map((subItem) => (
-                            <DropdownMenuItem key={subItem.href} href={subItem.href!} onClick={() => isMobile && setOpen(false)}>
-                                {subItem.label}
+                            <DropdownMenuItem key={subItem.href} asChild>
+                                <Link href={subItem.href!}>{subItem.label}</Link>
                             </DropdownMenuItem>
                         ))}
                     </DropdownMenuContent>
@@ -162,7 +172,7 @@ const MainNav = ({ isMobile = false }: { isMobile?: boolean }) => {
     }
 
     return (
-        <nav className="hidden md:flex items-center space-x-2 lg:space-x-4">
+        <nav className="hidden md:flex items-center space-x-1 lg:space-x-2">
             {mainNavLinks.map((link) => (
                 <NavLink key={link.label} item={link} />
             ))}
