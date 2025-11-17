@@ -34,40 +34,36 @@ async function batchUpdateLoanStatusesAction() {
       return { updatedCount: 0, errorCount: 0, errors: [] };
     }
 
-    // 2. Fetch all repayments for those active loans
-    const loanIds = activeLoans.map(l => l.id);
-    const { data: allRepayments, error: repaymentError } = await supabase
-      .from('loan_repayments')
-      .select('loan_id, principal_paid')
-      .in('loan_id', loanIds);
-    
-    if (repaymentError) {
-        throw new Error(`Failed to fetch repayments: ${repaymentError.message}`);
-    }
-
-    // 3. Group repayments by loan_id
-    const repaymentsByLoan = (allRepayments || []).reduce((acc, p) => {
-        if (!acc[p.loan_id]) {
-            acc[p.loan_id] = [];
-        }
-        acc[p.loan_id].push(p);
-        return acc;
-    }, {} as Record<string, typeof allRepayments>);
-
-    // 4. Identify loans to be updated
+    // 2. Identify loans that are fully paid off by checking each one.
     const loansToUpdate: string[] = [];
-    for (const loan of activeLoans) {
-        const principalPaid = (repaymentsByLoan[loan.id] || []).reduce((sum, p) => sum + p.principal_paid, 0);
-        if (principalPaid >= loan.amount) {
-            loansToUpdate.push(loan.id);
+    const errors: { id: string; message: string }[] = [];
+
+    await Promise.all(activeLoans.map(async (loan) => {
+        try {
+            const { data: repayments, error: repaymentError } = await supabase
+                .from('loan_repayments')
+                .select('principal_paid')
+                .eq('loan_id', loan.id);
+
+            if (repaymentError) {
+                throw new Error(repaymentError.message);
+            }
+
+            const totalPrincipalPaid = repayments.reduce((sum, p) => sum + p.principal_paid, 0);
+
+            if (totalPrincipalPaid >= loan.amount) {
+                loansToUpdate.push(loan.id);
+            }
+        } catch (error: any) {
+            errors.push({ id: loan.id, message: error.message });
         }
-    }
-
+    }));
+    
     if (loansToUpdate.length === 0) {
-        return { updatedCount: 0, errorCount: 0, errors: [] };
+        return { updatedCount: 0, errorCount: errors.length, errors: errors };
     }
 
-    // 5. Batch update the identified loans
+    // 3. Batch update the identified loans
     const { error: updateError } = await supabase
       .from('loans')
       .update({ status: 'Paid Off' })
@@ -77,7 +73,7 @@ async function batchUpdateLoanStatusesAction() {
         throw new Error(`Failed to update loan statuses: ${updateError.message}`);
     }
     
-    return { updatedCount: loansToUpdate.length, errorCount: 0, errors: [] };
+    return { updatedCount: loansToUpdate.length, errorCount: errors.length, errors: errors };
 }
 
 
@@ -99,6 +95,13 @@ export function SyncLoanStatuses() {
          toast({
           title: "No Updates Needed",
           description: "All active loan statuses are already correct.",
+        });
+      }
+      if (result.errorCount > 0) {
+        toast({
+            variant: "destructive",
+            title: "Some Checks Failed",
+            description: `Could not check status for ${result.errorCount} loan(s).`,
         });
       }
       router.refresh();
@@ -130,7 +133,7 @@ export function SyncLoanStatuses() {
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleSync}>Continue</AlertDialogAction>
+          <AlertDialogAction onClick={handleSync} disabled={isSyncing}>Continue</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
