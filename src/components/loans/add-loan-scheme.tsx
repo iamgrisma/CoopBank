@@ -99,6 +99,8 @@ export function AddLoanScheme({ triggerButton }: AddLoanSchemeProps) {
       is_active: true,
     },
   });
+  
+  const watchRepaymentFrequency = form.watch("repayment_frequency");
 
   const onSubmit = async (values: SchemeFormValues) => {
     setIsSubmitting(true);
@@ -107,6 +109,8 @@ export function AddLoanScheme({ triggerButton }: AddLoanSchemeProps) {
         ...values,
         offer_start_date: values.offer_start_date?.toISOString(),
         offer_end_date: values.offer_end_date?.toISOString(),
+        // If not monthly, ensure grace period is 0
+        grace_period_months: values.repayment_frequency === 'Monthly' ? values.grace_period_months : 0,
       };
       await addSchemeToDb(schemeData);
       toast({
@@ -171,30 +175,58 @@ export function AddLoanScheme({ triggerButton }: AddLoanSchemeProps) {
                         </FormItem>
                       )}
                     />
-                     <FormField
+                    <FormField
                       control={form.control}
-                      name="grace_period_months"
+                      name="repayment_frequency"
                       render={({ field }) => (
-                         <FormItem>
-                          <FormLabel>First Repayment Delay (Grace Period)</FormLabel>
-                            <Select onValueChange={(value) => field.onChange(parseInt(value, 10))} defaultValue={String(field.value)}>
-                                <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select grace period" />
-                                </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                    {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => (
-                                        <SelectItem key={m} value={String(m)}>{m === 0 ? "No Delay" : `${m} Month${m > 1 ? 's' : ''}`}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                          <FormDescription>Interest accrues during this time.</FormDescription>
+                        <FormItem>
+                          <FormLabel>Repayment Frequency</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select frequency" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Monthly">Monthly</SelectItem>
+                              <SelectItem value="Quarterly">Quarterly</SelectItem>
+                              <SelectItem value="Half-Yearly">Half-Yearly</SelectItem>
+                              <SelectItem value="Yearly">Yearly</SelectItem>
+                              <SelectItem value="One-Time">One-Time (At Maturity)</SelectItem>
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                 </div>
+
+                {watchRepaymentFrequency === 'Monthly' && (
+                  <FormField
+                    control={form.control}
+                    name="grace_period_months"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>First Repayment Delay (Grace Period)</FormLabel>
+                          <Select onValueChange={(value) => field.onChange(parseInt(value, 10))} defaultValue={String(field.value)}>
+                              <FormControl>
+                              <SelectTrigger>
+                                  <SelectValue placeholder="Select grace period" />
+                              </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                  {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => (
+                                      <SelectItem key={m} value={String(m)}>{m === 0 ? "No Delay" : `${m} Month${m > 1 ? 's' : ''}`}</SelectItem>
+                                  ))}
+                              </SelectContent>
+                          </Select>
+                        <FormDescription>Only applicable for monthly loans. Interest accrues during this time.</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
@@ -223,31 +255,6 @@ export function AddLoanScheme({ triggerButton }: AddLoanSchemeProps) {
                       )}
                     />
                 </div>
-                
-                <FormField
-                    control={form.control}
-                    name="repayment_frequency"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Repayment Frequency</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select frequency" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="Monthly">Monthly</SelectItem>
-                            <SelectItem value="Quarterly">Quarterly</SelectItem>
-                            <SelectItem value="Half-Yearly">Half-Yearly</SelectItem>
-                            <SelectItem value="Yearly">Yearly</SelectItem>
-                            <SelectItem value="One-Time">One-Time (At Maturity)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                   
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
@@ -413,5 +420,6 @@ export function AddLoanScheme({ triggerButton }: AddLoanSchemeProps) {
     </Dialog>
   );
 }
+    
 
     

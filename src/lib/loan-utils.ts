@@ -109,12 +109,15 @@ export const generateIdealSchedule = (
     const monthlyRate = annualRate / 12 / 100;
     const monthsPerPeriod = getMonthsPerPeriod(frequency);
     
+    // Grace period only applies to Monthly loans. For others, it's 0.
+    const effectiveGracePeriod = frequency === 'Monthly' ? gracePeriodMonths : 0;
+
     // 1. Calculate principal after grace period interest capitalization
-    const principalAfterGrace = principal * Math.pow(1 + monthlyRate, gracePeriodMonths);
-    const firstPaymentDate = addMonths(disbursementDate, gracePeriodMonths + monthsPerPeriod);
+    const principalAfterGrace = principal * Math.pow(1 + monthlyRate, effectiveGracePeriod);
+    const firstPaymentDate = addMonths(disbursementDate, effectiveGracePeriod + monthsPerPeriod);
 
     // 2. Calculate EPI based on the new principal and remaining term
-    const remainingTerm = termMonths - gracePeriodMonths;
+    const remainingTerm = termMonths - effectiveGracePeriod;
     const epi = calculateEPI(principalAfterGrace, annualRate, remainingTerm, frequency);
     
     if (epi === 0 && principalAfterGrace > 0) return [];
@@ -398,5 +401,7 @@ export const allocatePayment = (
 
     return allocation;
 };
+
+    
 
     
