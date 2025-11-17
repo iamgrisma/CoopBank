@@ -7,14 +7,7 @@ import {
     CardTitle,
   } from "@/components/ui/card"
 import { createSupabaseServerClient } from "@/lib/supabase-server"
-
-const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'NPR',
-      minimumFractionDigits: 2,
-    }).format(amount).replace('NPR', 'रु');
-}
+import { formatCurrency } from "@/lib/utils";
 
 type FinancialSummary = {
     shareCapital: number;
