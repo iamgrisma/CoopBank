@@ -1,4 +1,4 @@
-# Firebase Studio
+npm i next@canary# Firebase Studio
 
 This is a NextJS starter in Firebase Studio.
 
