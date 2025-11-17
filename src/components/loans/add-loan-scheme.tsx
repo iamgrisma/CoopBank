@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -40,7 +41,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import { Textarea } from "../ui/textarea";
 import { Checkbox } from "../ui/checkbox";
 import { ScrollArea } from "../ui/scroll-area";
 
@@ -54,6 +54,7 @@ const schemeFormSchema = z.object({
   default_interest_rate: z.coerce.number().min(0, "Interest rate cannot be negative."),
   max_term_months: z.coerce.number().int().positive("Max term must be a positive integer."),
   min_term_months: z.coerce.number().int().positive("Min term must be a positive integer."),
+  grace_period_months: z.coerce.number().int().min(0, "Grace period must be 0 or more.").default(0),
   applicable_to: z.array(z.string()).refine((value) => value.some((item) => item), {
     message: "You have to select at least one applicability option.",
   }),
@@ -90,6 +91,7 @@ export function AddLoanScheme({ triggerButton }: AddLoanSchemeProps) {
       default_interest_rate: 12,
       max_term_months: 60,
       min_term_months: 6,
+      grace_period_months: 0,
       applicable_to: ["members"],
       repayment_frequency: "Monthly",
       processing_fee_percentage: 1,
@@ -155,13 +157,13 @@ export function AddLoanScheme({ triggerButton }: AddLoanSchemeProps) {
                   )}
                 />
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="default_interest_rate"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Interest Rate (%)</FormLabel>
+                          <FormLabel>Interest Rate (% p.a.)</FormLabel>
                           <FormControl>
                             <Input type="number" step="0.1" {...field} />
                           </FormControl>
@@ -169,6 +171,22 @@ export function AddLoanScheme({ triggerButton }: AddLoanSchemeProps) {
                         </FormItem>
                       )}
                     />
+                     <FormField
+                      control={form.control}
+                      name="grace_period_months"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Grace Period (Months)</FormLabel>
+                          <FormControl>
+                            <Input type="number" {...field} />
+                          </FormControl>
+                          <FormDescription>No payments required during this period.</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="min_term_months"

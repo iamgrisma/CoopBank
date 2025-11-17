@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -59,6 +60,8 @@ type LoanScheme = {
   name: string;
   default_interest_rate: number;
   max_term_months: number;
+  grace_period_months: number;
+  repayment_frequency: string;
 };
 
 const loanFormSchema = z.object({
@@ -126,7 +129,6 @@ interface AddLoanProps {
 
 export function AddLoan({ members, loanSchemes, defaultMember, triggerButton }: AddLoanProps) {
   const [open, setOpen] = React.useState(false);
-  const [popoverOpen, setPopoverOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { toast } = useToast();
   const router = useRouter();
@@ -223,7 +225,7 @@ export function AddLoan({ members, loanSchemes, defaultMember, triggerButton }: 
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Member</FormLabel>
-                    <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                    <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
@@ -255,7 +257,6 @@ export function AddLoan({ members, loanSchemes, defaultMember, triggerButton }: 
                                   key={member.id}
                                   onSelect={() => {
                                     form.setValue("member_id", member.id);
-                                    setPopoverOpen(false);
                                   }}
                                 >
                                   <Check
@@ -293,7 +294,7 @@ export function AddLoan({ members, loanSchemes, defaultMember, triggerButton }: 
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {loanSchemes.map(scheme => (
+                      {loanSchemes.filter(s => s.is_active).map(scheme => (
                         <SelectItem key={scheme.id} value={scheme.id}>
                           {scheme.name}
                         </SelectItem>

@@ -1,3 +1,4 @@
+
 import { AddLoan } from "@/components/loans/add-loan";
 import { LoansTable } from "@/components/loans/loans-table";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,9 @@ async function getLoans() {
       ),
       loan_schemes (
         id,
-        name
+        name,
+        repayment_frequency,
+        grace_period_months
       )
     `)
     .order('disbursement_date', { ascending: false });

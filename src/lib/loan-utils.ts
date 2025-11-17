@@ -1,17 +1,18 @@
 
-
 import { addMonths, differenceInDays, isPast, isToday } from "date-fns";
 
+export type RepaymentFrequency = 'Monthly' | 'Quarterly' | 'Half-Yearly' | 'Yearly' | 'One-Time';
+
 export type AmortizationEntry = {
-  month: number;
+  month: number; // Represents the installment number, not calendar month
   paymentDate: Date;
   beginningBalance: number;
-  emi: number;
+  emi: number; // This is now EPI
   principal: number;
   interest: number;
   endingBalance: number;
   // Dynamic fields
-  status: 'PAID' | 'DUE' | 'UPCOMING' | 'OVERDUE' | 'PARTIALLY_PAID';
+  status: 'PAID' | 'DUE' | 'UPCOMING' | 'OVERDUE' | 'PARTIALLY_PAID' | 'SKIPPED';
   paidAmount: number;
   paidDate: Date | null;
   daysOverdue: number;
@@ -21,13 +22,13 @@ export type AmortizationEntry = {
   principalPaid: number;
   interestPaid: number;
   penaltyPaid: number;
-  penalInterestPaid: number; // New field to track this separately
+  penalInterestPaid: number; 
 };
 
 export type IdealScheduleEntry = {
   month: number;
   paymentDate: Date;
-  emi: number;
+  emi: number; // This is EPI
   principal: number;
   interest: number;
   endingBalance: number;
@@ -43,51 +44,95 @@ export type Repayment = {
     principal_paid: number;
     interest_paid: number;
     penalty_paid: number;
-    penal_interest_paid: number; // Add to type
+    penal_interest_paid: number;
 };
 
 export const PENALTY_RATE_PA = 0.05; // 5% per annum on the overdue EMI amount for the FINE.
 
-export const calculateEMI = (principal: number, annualRate: number, termMonths: number): number => {
+const getMonthsPerPeriod = (frequency: RepaymentFrequency): number => {
+    switch (frequency) {
+        case 'Quarterly': return 3;
+        case 'Half-Yearly': return 6;
+        case 'Yearly': return 12;
+        case 'One-Time': return Infinity;
+        case 'Monthly':
+        default:
+            return 1;
+    }
+}
+
+
+export const calculateEPI = (
+    principal: number, 
+    annualRate: number, 
+    termMonths: number,
+    frequency: RepaymentFrequency
+): number => {
   if (principal <= 0 || annualRate < 0 || termMonths <= 0) return 0;
   
+  const monthsPerPeriod = getMonthsPerPeriod(frequency);
   const monthlyRate = annualRate / 12 / 100;
-  if (monthlyRate === 0) {
-      return principal / termMonths;
+  const numberOfInstallments = Math.ceil(termMonths / monthsPerPeriod);
+
+  if (frequency === 'One-Time') {
+    return principal * Math.pow(1 + monthlyRate, termMonths);
   }
   
-  const emi =
-    (principal * monthlyRate * Math.pow(1 + monthlyRate, termMonths)) /
-    (Math.pow(1 + monthlyRate, termMonths) - 1);
-  return emi;
+  if (monthlyRate === 0) {
+      return principal / numberOfInstallments;
+  }
+  
+  // Calculate the effective periodic rate from the monthly rate
+  const periodicRate = Math.pow(1 + monthlyRate, monthsPerPeriod) - 1;
+  
+  if (periodicRate === 0) {
+    return principal / numberOfInstallments;
+  }
+
+  const epi =
+    (principal * periodicRate * Math.pow(1 + periodicRate, numberOfInstallments)) /
+    (Math.pow(1 + periodicRate, numberOfInstallments) - 1);
+    
+  return epi;
 };
 
 export const generateIdealSchedule = (
     principal: number,
     annualRate: number,
     termMonths: number,
-    disbursementDate: Date
+    disbursementDate: Date,
+    frequency: RepaymentFrequency,
+    gracePeriodMonths: number = 0
 ): IdealScheduleEntry[] => {
-    if (principal <= 0 || annualRate < 0 || termMonths <= 0) {
-        return [];
-    }
+    if (principal <= 0 || annualRate < 0 || termMonths <= 0) return [];
 
-    const emi = calculateEMI(principal, annualRate, termMonths);
-    if (emi === 0 && principal > 0) return [];
+    const monthlyRate = annualRate / 12 / 100;
+    const monthsPerPeriod = getMonthsPerPeriod(frequency);
+    
+    // 1. Calculate principal after grace period interest capitalization
+    const principalAfterGrace = principal * Math.pow(1 + monthlyRate, gracePeriodMonths);
+    const firstPaymentDate = addMonths(disbursementDate, gracePeriodMonths + monthsPerPeriod);
+
+    // 2. Calculate EPI based on the new principal and remaining term
+    const remainingTerm = termMonths - gracePeriodMonths;
+    const epi = calculateEPI(principalAfterGrace, annualRate, remainingTerm, frequency);
+    
+    if (epi === 0 && principalAfterGrace > 0) return [];
 
     const schedule: IdealScheduleEntry[] = [];
-    let currentBalance = principal;
-    const monthlyRate = annualRate / 12 / 100;
+    let currentBalance = principalAfterGrace;
+    const numberOfInstallments = Math.ceil(remainingTerm / monthsPerPeriod);
+    const periodicRate = Math.pow(1 + monthlyRate, monthsPerPeriod) - 1;
 
-    for (let i = 1; i <= termMonths; i++) {
-        const interest = currentBalance * monthlyRate;
-        const principalComponent = emi - interest;
+    for (let i = 1; i <= numberOfInstallments; i++) {
+        const interest = currentBalance * periodicRate;
+        const principalComponent = epi - interest;
         const endingBalance = currentBalance - principalComponent;
 
         schedule.push({
             month: i,
-            paymentDate: addMonths(disbursementDate, i),
-            emi: emi,
+            paymentDate: addMonths(firstPaymentDate, (i - 1) * monthsPerPeriod),
+            emi: epi,
             principal: principalComponent,
             interest: interest,
             endingBalance: endingBalance,
@@ -118,9 +163,11 @@ export const generateDynamicAmortizationSchedule = (
   annualRate: number,
   termMonths: number,
   disbursementDate: Date,
-  repayments: Repayment[]
+  repayments: Repayment[],
+  frequency: RepaymentFrequency,
+  gracePeriodMonths: number
 ): AmortizationEntry[] => {
-  const idealSchedule = generateIdealSchedule(principal, annualRate, termMonths, disbursementDate);
+  const idealSchedule = generateIdealSchedule(principal, annualRate, termMonths, disbursementDate, frequency, gracePeriodMonths);
   if (idealSchedule.length === 0) return [];
 
   // 1. Initialize the live schedule from the ideal one
@@ -207,28 +254,35 @@ const calculateCurrentDues = (schedule: AmortizationEntry[], annualRate: number,
         const dueDate = new Date(entry.paymentDate);
         dueDate.setHours(0, 0, 0, 0);
         
+        // Skip calculations for installments that are fully paid
+        if ((entry.principal - entry.principalPaid) < 0.01 && (entry.interest - entry.interestPaid) < 0.01) {
+            entry.status = 'PAID';
+            entry.totalDue = 0;
+            return;
+        }
+
         const outstandingPrincipal = Math.max(0, entry.principal - entry.principalPaid);
         const outstandingInterest = Math.max(0, entry.interest - entry.interestPaid);
         const isOverdue = isPast(dueDate) && !isToday(dueDate);
         
         // This is the remaining part of the original scheduled payment
-        const outstandingEMI = outstandingPrincipal + outstandingInterest;
+        const outstandingEPI = outstandingPrincipal + outstandingInterest;
         
-        // Calculate Penalties and Fines only if it's overdue and there's a balance on the original EMI
+        // Calculate Penalties and Fines only if it's overdue and there's a balance on the original EPI
         entry.daysOverdue = 0;
         entry.penalInterest = 0;
         entry.penalty = 0;
 
-        if (isOverdue && outstandingEMI > 0) {
+        if (isOverdue && outstandingEPI > 0) {
             entry.daysOverdue = differenceInDays(today, dueDate);
             if (entry.daysOverdue > 0) {
-                // Penal interest is on the outstanding EMI amount at the main loan interest rate
+                // Penal interest is on the outstanding EPI amount at the main loan interest rate
                 const dailyMainRate = annualRate / 365 / 100;
-                entry.penalInterest = outstandingEMI * dailyMainRate * entry.daysOverdue;
+                entry.penalInterest = outstandingEPI * dailyMainRate * entry.daysOverdue;
                 
-                // Fine is also on the outstanding EMI amount at a separate penalty rate
+                // Fine is also on the outstanding EPI amount at a separate penalty rate
                 const dailyPenaltyRate = PENALTY_RATE_PA / 365;
-                entry.penalty = outstandingEMI * dailyPenaltyRate * entry.daysOverdue;
+                entry.penalty = outstandingEPI * dailyPenaltyRate * entry.daysOverdue;
             }
         }
         

@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { generateDynamicAmortizationSchedule, formatCurrency, calculateTotalRepaid, Repayment, AmortizationEntry, calculateEMI, generateIdealSchedule, IdealScheduleEntry } from "@/lib/loan-utils";
+import { generateDynamicAmortizationSchedule, formatCurrency, calculateTotalRepaid, Repayment, AmortizationEntry, generateIdealSchedule, IdealScheduleEntry, RepaymentFrequency } from "@/lib/loan-utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { Button } from "../ui/button";
 import { MoreHorizontal, PlusCircle } from "lucide-react";
@@ -33,6 +33,11 @@ type Loan = {
   interest_rate: number;
   loan_term_months: number;
   members: { id: string; name: string; } | null;
+  loan_schemes: {
+      name: string;
+      repayment_frequency: RepaymentFrequency;
+      grace_period_months: number;
+  } | null;
 };
 
 interface LoanDetailsDialogProps {
@@ -75,13 +80,18 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
 
       const fetchedRepayments = repaymentData || [];
       setRepayments(fetchedRepayments);
+      
+      const frequency = loan.loan_schemes?.repayment_frequency || 'Monthly';
+      const gracePeriod = loan.loan_schemes?.grace_period_months || 0;
 
       const dynamicSchedule = generateDynamicAmortizationSchedule(
           loan.amount,
           loan.interest_rate,
           loan.loan_term_months,
           new Date(loan.disbursement_date),
-          fetchedRepayments
+          fetchedRepayments,
+          frequency,
+          gracePeriod
       );
       setSchedule(dynamicSchedule);
 
@@ -89,7 +99,9 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
           loan.amount,
           loan.interest_rate,
           loan.loan_term_months,
-          new Date(loan.disbursement_date)
+          new Date(loan.disbursement_date),
+          frequency,
+          gracePeriod
       );
       setIdealSchedule(ideal);
 
@@ -106,7 +118,7 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [loan.id, loan.amount, loan.interest_rate, loan.loan_term_months, loan.disbursement_date, toast]);
+  }, [loan, toast]);
 
 
   React.useEffect(() => {
@@ -220,7 +232,7 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
                                 <TableRow>
                                     <TableHead>#</TableHead>
                                     <TableHead>Due Date</TableHead>
-                                    <TableHead className="text-right">EMI</TableHead>
+                                    <TableHead className="text-right">EPI</TableHead>
                                     <TableHead className="text-right">Principal</TableHead>
                                     <TableHead className="text-right">Interest</TableHead>
                                     <TableHead className="text-right">Ending Balance</TableHead>

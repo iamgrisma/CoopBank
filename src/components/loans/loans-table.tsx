@@ -1,3 +1,4 @@
+
 "use client"
 
 import Link from "next/link"
@@ -12,6 +13,7 @@ import {
 import { format } from "date-fns"
 import { Badge } from "../ui/badge";
 import { LoanDetailsDialog } from "./loan-details-dialog";
+import { RepaymentFrequency } from "@/lib/loan-utils";
 
 type Loan = {
   id: string;
@@ -27,6 +29,8 @@ type Loan = {
   loan_schemes: {
     id: string;
     name: string;
+    repayment_frequency: RepaymentFrequency;
+    grace_period_months: number;
   } | null;
 };
 
@@ -110,5 +114,3 @@ export function LoansTable({ loans }: { loans: Loan[] }) {
     </div>
   )
 }
-
-    
