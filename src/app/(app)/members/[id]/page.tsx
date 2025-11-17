@@ -1,5 +1,4 @@
 
-
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -464,9 +463,5 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
     </main>
   );
 }
-
-    
-
-    
 
     

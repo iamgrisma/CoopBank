@@ -247,131 +247,133 @@ export function AddRepaymentForm({ loanId, memberId, memberName, schedule, onRep
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {triggerButton}
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Add Loan Repayment</DialogTitle>
-          <DialogDescription>
-            Record a new payment for {memberName}. Total amount due is {formatCurrency(totalDue)}.
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
-            <FormField
-              control={form.control}
-              name="amount_paid"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Amount Paid</FormLabel>
-                  <FormControl>
-                    <Input type="number" step="0.01" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="payment_date"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Payment Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn("w-full pl-3 text-left font-normal",!field.value && "text-muted-foreground")}>
-                          {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus/>
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+    <TooltipProvider>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          {triggerButton}
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Loan Repayment</DialogTitle>
+            <DialogDescription>
+              Record a new payment for {memberName}. Total amount due is {formatCurrency(totalDue)}.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
+              <FormField
+                control={form.control}
+                name="amount_paid"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Amount Paid</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="payment_date"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Payment Date</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn("w-full pl-3 text-left font-normal",!field.value && "text-muted-foreground")}>
+                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus/>
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            {allocation && (
-                <div className="p-3 rounded-md border border-dashed text-sm grid gap-2">
-                    <h4 className="font-semibold text-base">Payment Allocation</h4>
-                     <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Fine:</span>
-                        <span className={cn(form.getValues("waive_fine") && "line-through text-muted-foreground")}>{formatCurrency(allocation.fine)}</span>
-                    </div>
-                     <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Penal Interest:</span>
-                        <span>{formatCurrency(allocation.penalInterest)}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Regular Interest:</span>
-                        <span>{formatCurrency(allocation.interest)}</span>
-                    </div>
-                     <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Principal:</span>
-                        <span>{formatCurrency(allocation.principal)}</span>
-                    </div>
-                    {allocation.savings > 0 && (
-                         <div className="flex justify-between items-center text-green-600">
-                            <span className="font-semibold">Excess to Savings:</span>
-                            <span className="font-semibold">{formatCurrency(allocation.savings)}</span>
-                        </div>
-                    )}
-                </div>
-            )}
-            
-            <FormField
-              control={form.control}
-              name="waive_fine"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>
-                      Waive Fine
-                    </FormLabel>
-                    <FormDescription>
-                      Check this to waive the 5% fine amount (penal interest will still apply).
-                    </FormDescription>
+              {allocation && (
+                  <div className="p-3 rounded-md border border-dashed text-sm grid gap-2">
+                      <h4 className="font-semibold text-base">Payment Allocation</h4>
+                       <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Fine:</span>
+                          <span className={cn(form.getValues("waive_fine") && "line-through text-muted-foreground")}>{formatCurrency(allocation.fine)}</span>
+                      </div>
+                       <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Penal Interest:</span>
+                          <span>{formatCurrency(allocation.penalInterest)}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Regular Interest:</span>
+                          <span>{formatCurrency(allocation.interest)}</span>
+                      </div>
+                       <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Principal:</span>
+                          <span>{formatCurrency(allocation.principal)}</span>
+                      </div>
+                      {allocation.savings > 0 && (
+                           <div className="flex justify-between items-center text-green-600">
+                              <span className="font-semibold">Excess to Savings:</span>
+                              <span className="font-semibold">{formatCurrency(allocation.savings)}</span>
+                          </div>
+                      )}
                   </div>
-                </FormItem>
               )}
-            />
+              
+              <FormField
+                control={form.control}
+                name="waive_fine"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>
+                        Waive Fine
+                      </FormLabel>
+                      <FormDescription>
+                        Check this to waive the 5% fine amount (penal interest will still apply).
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
 
 
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notes (Optional)</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="e.g. Monthly installment" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <DialogFooter>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Recording..." : "Record Payment"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notes (Optional)</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="e.g. Monthly installment" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Recording..." : "Record Payment"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    </TooltipProvider>
   );
 }
