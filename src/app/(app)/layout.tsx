@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -11,6 +12,7 @@ import {
   UsersRound,
   Wallet,
   ChevronDown,
+  WalletCards,
 } from "lucide-react";
 
 import { Header } from "@/components/header";
@@ -68,6 +70,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   <Link href="/members">
                     <UsersRound />
                     <span>Members</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Accounts">
+                  <Link href="/accounts">
+                    <WalletCards />
+                    <span>Accounts</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -173,3 +183,4 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     </SidebarProvider>
   );
 }
+
