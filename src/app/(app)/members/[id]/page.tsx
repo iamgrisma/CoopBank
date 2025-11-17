@@ -1,13 +1,12 @@
 
-
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { format } from "date-fns";
-import { AtSign, Cake, HandCoins, MapPin, Phone, PlusCircle, Scale, TrendingDown, TrendingUp, UserCheck, Wallet } from "lucide-react";
+import { format, differenceInYears } from "date-fns";
+import { AtSign, Cake, HandCoins, MapPin, Phone, PlusCircle, Scale, TrendingDown, TrendingUp, User, UserCheck, Wallet, Briefcase } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AddShare } from "@/components/shares/add-share";
 import { Button } from "@/components/ui/button";
@@ -146,7 +145,6 @@ async function getTransactions(supabase: SupabaseClient, memberId: string) {
     return data;
 }
 
-
 const getInitials = (name: string | undefined) => {
   if (!name) return "U";
   const names = name.split(' ');
@@ -158,12 +156,38 @@ const getInitials = (name: string | undefined) => {
   
 const formatAccountNumber = (accountNumber: string | null) => {
     if (!accountNumber) return 'N/A';
-    // Format: xxx-xx-xx-xx-xxxxxxx
     const match = accountNumber.match(/^(\d{3})(\d{2})(\d{2})(\d{2})(\d{7})$/);
     if (match) {
         return `${match[1]}-${match[2]}-${match[3]}-${match[4]}-${match[5]}`;
     }
     return accountNumber;
+}
+
+function ProfileInfoItem({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: string | React.ReactNode }) {
+    return (
+        <div className="flex items-center gap-3">
+            <Icon className="h-5 w-5 text-muted-foreground" />
+            <div>
+                <p className="text-sm text-muted-foreground">{label}</p>
+                <p className="font-medium break-all">{value}</p>
+            </div>
+        </div>
+    )
+}
+
+function StatCard({ title, value, icon: Icon, description }: { title: string, value: string, icon: React.ElementType, description?: string }) {
+    return (
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{title}</CardTitle>
+                <Icon className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold">{value}</div>
+                {description && <p className="text-xs text-muted-foreground">{description}</p>}
+            </CardContent>
+        </Card>
+    )
 }
 
 export default async function MemberProfilePage({ params }: { params: { id: string } }) {
@@ -235,51 +259,40 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="grid auto-rows-max gap-4 lg:col-span-1">
-          <Card>
-            <CardHeader className="flex flex-col items-center text-center">
-                <Avatar className="h-24 w-24 mb-4">
+        <Card className="w-full">
+            <CardContent className="p-6 flex flex-col md:flex-row items-start gap-6">
+                <Avatar className="h-28 w-28 border-4 border-background">
                     {member.photo_url && <AvatarImage src={member.photo_url} alt={member.name || 'member photo'} />}
-                    <AvatarFallback className="text-3xl">{getInitials(member.name)}</AvatarFallback>
+                    <AvatarFallback className="text-4xl">{getInitials(member.name)}</AvatarFallback>
                 </Avatar>
-                <CardTitle className="text-2xl">{member.name}</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                    Joined on {format(new Date(member.join_date), "do MMMM, yyyy")}
-                </p>
-                 <p className="text-xs text-muted-foreground pt-2">
-                    A/C: {formatAccountNumber(member.account_number)}
-                </p>
-            </CardHeader>
-            <CardContent className="text-sm">
-                <div className="grid gap-3">
-                    <div className="flex items-start gap-3">
-                        <AtSign className="h-4 w-4 text-muted-foreground mt-1" />
-                        <span className="break-all">{member.email || 'No email provided'}</span>
+                <div className="flex-grow">
+                    <h1 className="text-3xl font-bold font-headline">{member.name}</h1>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                        <span>A/C: <span className="font-mono">{formatAccountNumber(member.account_number)}</span></span>
+                        <span>|</span>
+                        <span>Joined on {format(new Date(member.join_date), "do MMMM, yyyy")}</span>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <Phone className="h-4 w-4 text-muted-foreground" />
-                        <span>{member.phone || 'No phone provided'}</span>
-                    </div>
-                    <div className="flex items-start gap-3">
-                        <MapPin className="h-4 w-4 text-muted-foreground mt-1" />
-                        <span>{member.address || 'No address provided'}</span>
-                    </div>
-                     <div className="flex items-center gap-3">
-                        <Cake className="h-4 w-4 text-muted-foreground" />
-                        <span>{member.dob ? format(new Date(member.dob), "do MMMM, yyyy") : 'Not specified'}</span>
-                    </div>
+                     <div className="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
+                        <ProfileInfoItem icon={AtSign} label="Email" value={member.email || 'N/A'} />
+                        <ProfileInfoItem icon={Phone} label="Phone" value={member.phone || 'N/A'} />
+                        <ProfileInfoItem icon={MapPin} label="Address" value={member.address || 'N/A'} />
+                        <ProfileInfoItem 
+                            icon={Cake} 
+                            label="Date of Birth" 
+                            value={member.dob ? `${format(new Date(member.dob), "do MMMM, yyyy")} (${differenceInYears(new Date(), new Date(member.dob))} years)` : 'N/A'} 
+                        />
+                     </div>
                 </div>
             </CardContent>
-          </Card>
-        </div>
+        </Card>
 
-        <div className="md:col-span-2">
-            <Tabs defaultValue="shares">
+      <div className="grid gap-6 md:grid-cols-3">
+        <div className="md:col-span-3">
+            <Tabs defaultValue="loans">
                 <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5">
-                    <TabsTrigger value="shares">Shares</TabsTrigger>
-                    <TabsTrigger value="savings">Savings</TabsTrigger>
                     <TabsTrigger value="loans">Loans</TabsTrigger>
+                    <TabsTrigger value="savings">Savings</TabsTrigger>
+                    <TabsTrigger value="shares">Shares</TabsTrigger>
                     <TabsTrigger value="statement">Statement</TabsTrigger>
                     <TabsTrigger value="kyc" className="hidden sm:inline-flex">KYC</TabsTrigger>
                 </TabsList>
@@ -298,14 +311,8 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                         </CardHeader>
                         <CardContent>
                             <div className="mb-4 grid grid-cols-2 gap-4">
-                                <div className="p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
-                                    <h3 className="text-sm font-medium text-muted-foreground">Total Shares</h3>
-                                    <p className="text-2xl font-bold">{totalSharesCount}</p>
-                                </div>
-                                <div className="p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
-                                    <h3 className="text-sm font-medium text-muted-foreground">Total Value</h3>
-                                    <p className="text-2xl font-bold">{formatCurrency(totalSharesValue)}</p>
-                                </div>
+                                <StatCard title="Total Shares" value={totalSharesCount.toString()} icon={Briefcase} />
+                                <StatCard title="Total Value" value={formatCurrency(totalSharesValue)} icon={Wallet} />
                             </div>
                             <Table>
                                 <TableHeader>
@@ -348,11 +355,8 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                         </CardHeader>
                         <CardContent>
                              <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
-                                    <h3 className="text-sm font-medium text-muted-foreground">Total Savings Balance</h3>
-                                    <p className="text-2xl font-bold">{formatCurrency(totalSavings)}</p>
-                                </div>
-                                 <Card className="bg-amber-50 dark:bg-amber-900/20">
+                               <StatCard title="Total Savings Balance" value={formatCurrency(totalSavings)} icon={Wallet} />
+                                <Card className="bg-amber-50 dark:bg-amber-900/20">
                                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                         <CardTitle className="text-sm font-medium text-amber-800 dark:text-amber-400">Total Accrued Interest</CardTitle>
                                         <TrendingUp className="h-4 w-4 text-amber-700 dark:text-amber-300" />
@@ -409,33 +413,9 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                         </CardHeader>
                         <CardContent>
                             <div className="mb-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
-                                <Card>
-                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                        <CardTitle className="text-sm font-medium">Total Loaned</CardTitle>
-                                        <HandCoins className="h-4 w-4 text-muted-foreground" />
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-2xl font-bold">{formatCurrency(totalLoanAmount)}</div>
-                                    </CardContent>
-                                </Card>
-                                <Card>
-                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                        <CardTitle className="text-sm font-medium">Total Repaid</CardTitle>
-                                        <Wallet className="h-4 w-4 text-muted-foreground" />
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-2xl font-bold text-green-600">{formatCurrency(totalRepaidAmount)}</div>
-                                    </CardContent>
-                                </Card>
-                                 <Card>
-                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                        <CardTitle className="text-sm font-medium">Remaining Principal</CardTitle>
-                                        <Scale className="h-4 w-4 text-muted-foreground" />
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-2xl font-bold">{formatCurrency(remainingPrincipal)}</div>
-                                    </CardContent>
-                                </Card>
+                                <StatCard title="Total Loaned" value={formatCurrency(totalLoanAmount)} icon={HandCoins} />
+                                <StatCard title="Total Repaid" value={formatCurrency(totalRepaidAmount)} icon={Wallet} />
+                                <StatCard title="Remaining Principal" value={formatCurrency(remainingPrincipal)} icon={Scale} />
                                 <Card className={totalOverdue > 0 ? "bg-destructive/10 border-destructive/50" : ""}>
                                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                         <CardTitle className="text-sm font-medium">Total Overdue</CardTitle>
@@ -489,10 +469,7 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                      <Card>
                         <CardHeader>
                             <div className="flex items-center gap-4">
-                                <Avatar className="h-16 w-16">
-                                    {member.photo_url && <AvatarImage src={member.photo_url} alt={member.name || 'member photo'} />}
-                                    <AvatarFallback className="text-2xl">{getInitials(member.name)}</AvatarFallback>
-                                </Avatar>
+                                <UserCheck className="h-10 w-10 text-primary" />
                                 <div className="grid gap-1">
                                     <CardTitle>KYC Details</CardTitle>
                                     <p className="text-muted-foreground">Detailed member information for compliance.</p>
@@ -546,3 +523,5 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
     </main>
   );
 }
+
+    
