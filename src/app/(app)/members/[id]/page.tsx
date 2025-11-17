@@ -1,7 +1,7 @@
 
-
 import { notFound } from "next/navigation";
 import Image from "next/image";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,7 +17,6 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { LoanDetailsDialog } from "@/components/loans/loan-details-dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { calculateAccruedInterestForAllSavings } from "@/lib/saving-utils";
-import type { SupabaseClient } from "@supabase/supabase-js";
 
 async function getMember(supabase: SupabaseClient, id: string) {
   const { data: member, error } = await supabase
@@ -25,9 +24,10 @@ async function getMember(supabase: SupabaseClient, id: string) {
     .select("*, district:districts(name), province:provinces(name), local_level:local_levels(name)")
     .eq("id", id)
     .single();
-
-  if (error || !member) {
-    notFound();
+  
+  if (error) {
+    console.error("Error fetching member:", error.message);
+    return null;
   }
 
   return member;
@@ -144,7 +144,13 @@ const formatAccountNumber = (accountNumber: string | null) => {
 
 export default async function MemberProfilePage({ params }: { params: { id: string } }) {
   const supabase = createSupabaseServerClient();
+  
   const member = await getMember(supabase, params.id);
+  
+  if (!member) {
+      notFound();
+  }
+  
   const shares = await getShares(supabase, params.id);
   const savings = await getSavings(supabase, params.id);
   const loans = await getLoans(supabase, params.id);
