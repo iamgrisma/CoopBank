@@ -22,6 +22,8 @@ type Loan = {
   status: string;
   interest_rate: number;
   loan_term_months: number;
+  repayment_frequency: RepaymentFrequency;
+  grace_period_months: number;
   members: {
     id: string;
     name: string;

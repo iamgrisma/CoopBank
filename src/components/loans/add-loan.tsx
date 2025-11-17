@@ -22,6 +22,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -62,6 +63,7 @@ type LoanScheme = {
   max_term_months: number;
   grace_period_months: number;
   repayment_frequency: string;
+  is_active: boolean;
 };
 
 const loanFormSchema = z.object({
@@ -73,6 +75,8 @@ const loanFormSchema = z.object({
   disbursement_date: z.date({ required_error: "Disbursement date is required." }),
   status: z.string().min(1, { message: "Please select a status." }),
   description: z.string().optional(),
+  repayment_frequency: z.string(), // Hidden but required for submission
+  grace_period_months: z.number().int(), // Hidden but required for submission
 });
 
 type LoanFormValues = z.infer<typeof loanFormSchema>;
@@ -90,6 +94,8 @@ async function addLoanToDb(loan: Omit<LoanFormValues, 'disbursement_date'> & { d
       disbursement_date: loan.disbursement_date,
       status: loan.status,
       description: loan.description,
+      repayment_frequency: loan.repayment_frequency,
+      grace_period_months: loan.grace_period_months,
     })
     .select();
 
@@ -108,7 +114,7 @@ async function addLoanToDb(loan: Omit<LoanFormValues, 'disbursement_date'> & { d
         amount: loan.amount,
         date: loan.disbursement_date,
         status: 'Completed',
-        description: `Loan disbursed. ${loan.description || ''}`
+        description: `Loan disbursed for ${loan.description || 'scheme ' + loan.loan_scheme_id}`
       });
 
     if (transactionError) {
@@ -143,7 +149,9 @@ export function AddLoan({ members, loanSchemes, defaultMember, triggerButton }: 
       loan_term_months: 12,
       disbursement_date: new Date(),
       status: 'Pending',
-      description: ""
+      description: "",
+      repayment_frequency: 'Monthly',
+      grace_period_months: 0,
     },
   });
 
@@ -155,6 +163,8 @@ export function AddLoan({ members, loanSchemes, defaultMember, triggerButton }: 
       if (scheme) {
         form.setValue("interest_rate", scheme.default_interest_rate);
         form.setValue("loan_term_months", scheme.max_term_months);
+        form.setValue("repayment_frequency", scheme.repayment_frequency);
+        form.setValue("grace_period_months", scheme.repayment_frequency === 'Monthly' ? scheme.grace_period_months : 0);
       }
     }
   }, [selectedSchemeId, loanSchemes, form]);
@@ -169,7 +179,9 @@ export function AddLoan({ members, loanSchemes, defaultMember, triggerButton }: 
         loan_term_months: 12,
         disbursement_date: new Date(),
         status: 'Pending',
-        description: ""
+        description: "",
+        repayment_frequency: 'Monthly',
+        grace_period_months: 0
       });
     }
   }, [open, defaultMember, form]);
@@ -203,6 +215,8 @@ export function AddLoan({ members, loanSchemes, defaultMember, triggerButton }: 
       setIsSubmitting(false);
     }
   };
+  
+  const selectedScheme = loanSchemes.find(s => s.id === selectedSchemeId);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -306,6 +320,21 @@ export function AddLoan({ members, loanSchemes, defaultMember, triggerButton }: 
               )}
             />
             
+            {selectedSchemeId && (
+                <div className="grid gap-3 rounded-md border p-4 text-sm">
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">Repayment Frequency</span>
+                        <span className="font-medium">{selectedScheme?.repayment_frequency}</span>
+                    </div>
+                     {selectedScheme?.repayment_frequency === 'Monthly' && (
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">First Payment Delay</span>
+                            <span className="font-medium">{selectedScheme?.grace_period_months} Month(s)</span>
+                        </div>
+                    )}
+                </div>
+            )}
+            
             <FormField
               control={form.control}
               name="amount"
@@ -328,7 +357,7 @@ export function AddLoan({ members, loanSchemes, defaultMember, triggerButton }: 
                     <FormItem>
                       <FormLabel>Interest Rate (%)</FormLabel>
                       <FormControl>
-                        <Input type="number" step="0.01" {...field} />
+                        <Input type="number" step="0.01" {...field} disabled />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -341,7 +370,7 @@ export function AddLoan({ members, loanSchemes, defaultMember, triggerButton }: 
                     <FormItem>
                       <FormLabel>Term (Months)</FormLabel>
                       <FormControl>
-                        <Input type="number" {...field} />
+                        <Input type="number" {...field} disabled />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -402,11 +431,14 @@ export function AddLoan({ members, loanSchemes, defaultMember, triggerButton }: 
                     </FormControl>
                     <SelectContent>
                         <SelectItem value="Pending">Pending</SelectItem>
-                        <SelectItem value="Active">Active</SelectItem>
+                        <SelectItem value="Active">Active (Disburse)</SelectItem>
                         <SelectItem value="Paid Off">Paid Off</SelectItem>
                         <SelectItem value="Rejected">Rejected</SelectItem>
                     </SelectContent>
                   </Select>
+                   <FormDescription>
+                    Setting to 'Active' will disburse the loan and create a transaction.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

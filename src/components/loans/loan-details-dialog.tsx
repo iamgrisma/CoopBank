@@ -32,6 +32,8 @@ type Loan = {
   status: string;
   interest_rate: number;
   loan_term_months: number;
+  repayment_frequency: RepaymentFrequency;
+  grace_period_months: number;
   members: { id: string; name: string; } | null;
   loan_schemes: {
       name: string;
@@ -81,8 +83,8 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
       const fetchedRepayments = repaymentData || [];
       setRepayments(fetchedRepayments);
       
-      const frequency = loan.loan_schemes?.repayment_frequency || 'Monthly';
-      const gracePeriod = loan.loan_schemes?.grace_period_months || 0;
+      const frequency = loan.repayment_frequency || loan.loan_schemes?.repayment_frequency || 'Monthly';
+      const gracePeriod = loan.grace_period_months ?? loan.loan_schemes?.grace_period_months ?? 0;
 
       const dynamicSchedule = generateDynamicAmortizationSchedule(
           loan.amount,
@@ -380,5 +382,3 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
     </Dialog>
   );
 }
-
-    
