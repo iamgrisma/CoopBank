@@ -12,6 +12,7 @@ import {
   Search,
   Globe,
   Menu,
+  ChevronDown,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -28,14 +29,31 @@ import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "./ui/t
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { useState } from "react";
 
-const mainNavLinks = [
+type NavItem = {
+  href?: string;
+  label: string;
+  icon: React.ElementType;
+  subItems?: Omit<NavItem, 'icon' | 'subItems'>[];
+  paths?: string[];
+};
+
+
+const mainNavLinks: NavItem[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/members", label: "Members", icon: UsersRound },
   { href: "/accounts", label: "Accounts", icon: Wallet },
   { href: "/shares", label: "Shares", icon: Wallet },
-  { href: "/savings", label: "Savings", icon: Wallet },
-  { href: "/loans", label: "Loans", icon: HandCoins },
-  { href: "/accounting/journals", label: "Journals", icon: BookOpenCheck },
+  { href: "/savings", label: "Savings", icon: Wallet, paths: ['/savings', '/savings/schemes']},
+  { 
+    label: "Loans", 
+    icon: HandCoins, 
+    paths: ['/loans', '/loans/schemes'],
+    subItems: [
+      { href: "/loans", label: "All Loans" },
+      { href: "/loans/schemes", label: "Loan Schemes" },
+    ] 
+  },
+  { href: "/accounting/journals", label: "Journals", icon: BookOpenCheck, paths: ['/accounting/journals', '/accounting/chart-of-accounts'] },
   { href: "/reports", label: "Reports", icon: FilePieChart },
 ];
 
@@ -44,31 +62,65 @@ const MainNav = ({ isMobile = false }: { isMobile?: boolean }) => {
     const pathname = usePathname();
     const [open, setOpen] = useState(false);
 
-    const NavLink = ({ href, label, icon: Icon }: typeof mainNavLinks[0]) => (
-         <TooltipProvider delayDuration={0}>
-            <Tooltip>
-                <TooltipTrigger asChild>
-                    <Link
-                        href={href}
-                        onClick={() => isMobile && setOpen(false)}
-                        className={cn(
-                            "text-sm font-medium transition-colors hover:text-primary flex items-center gap-2",
-                            pathname === href ? "text-primary" : "text-muted-foreground",
-                            isMobile ? "text-lg p-2" : ""
-                        )}
-                    >
-                        <Icon className="h-5 w-5" />
-                        <span className={cn(isMobile ? "" : "hidden md:inline")}>{label}</span>
-                    </Link>
-                </TooltipTrigger>
-                {!isMobile && (
-                    <TooltipContent side="bottom" className="md:hidden">
-                        {label}
-                    </TooltipContent>
-                )}
-            </Tooltip>
-        </TooltipProvider>
-    );
+    const NavLink = ({ item }: { item: NavItem }) => {
+        const isActive = item.href === pathname || (item.paths && item.paths.includes(pathname));
+
+        if (item.subItems) {
+            return (
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                         <Button
+                            variant="ghost"
+                            className={cn(
+                                "text-sm font-medium transition-colors hover:text-primary flex items-center gap-2 justify-start",
+                                isActive ? "text-primary" : "text-muted-foreground",
+                                isMobile ? "text-lg p-2" : "p-2 h-auto"
+                            )}
+                        >
+                            <item.icon className="h-5 w-5" />
+                            <span className={cn(isMobile ? "" : "hidden md:inline")}>{item.label}</span>
+                            <ChevronDown className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                        {item.subItems.map((subItem) => (
+                            <DropdownMenuItem key={subItem.href} asChild>
+                                <Link href={subItem.href!} onClick={() => isMobile && setOpen(false)}>
+                                    {subItem.label}
+                                </Link>
+                            </DropdownMenuItem>
+                        ))}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            );
+        }
+
+        return (
+             <TooltipProvider delayDuration={0}>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Link
+                            href={item.href!}
+                            onClick={() => isMobile && setOpen(false)}
+                            className={cn(
+                                "text-sm font-medium transition-colors hover:text-primary flex items-center gap-2",
+                                isActive ? "text-primary" : "text-muted-foreground",
+                                isMobile ? "text-lg p-2" : ""
+                            )}
+                        >
+                            <item.icon className="h-5 w-5" />
+                            <span className={cn(isMobile ? "" : "hidden md:inline")}>{item.label}</span>
+                        </Link>
+                    </TooltipTrigger>
+                    {!isMobile && (
+                        <TooltipContent side="bottom" className="md:hidden">
+                            {item.label}
+                        </TooltipContent>
+                    )}
+                </Tooltip>
+            </TooltipProvider>
+        );
+    }
 
     if (isMobile) {
         return (
@@ -86,7 +138,7 @@ const MainNav = ({ isMobile = false }: { isMobile?: boolean }) => {
                 <SheetContent side="left">
                     <nav className="grid gap-6 text-lg font-medium mt-8">
                          {mainNavLinks.map((link) => (
-                            <NavLink key={link.href} {...link} />
+                            <NavLink key={link.label} item={link} />
                          ))}
                     </nav>
                 </SheetContent>
@@ -95,9 +147,9 @@ const MainNav = ({ isMobile = false }: { isMobile?: boolean }) => {
     }
 
     return (
-        <nav className="hidden md:flex items-center space-x-4 lg:space-x-6">
+        <nav className="hidden md:flex items-center space-x-2 lg:space-x-4">
             {mainNavLinks.map((link) => (
-                <NavLink key={link.href} {...link} />
+                <NavLink key={link.label} item={link} />
             ))}
         </nav>
     )
