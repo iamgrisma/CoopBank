@@ -17,7 +17,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -41,7 +40,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { getDistricts, getLocalLevels } from "@/lib/data";
 
 type Member = {
   id: string;
@@ -61,20 +59,6 @@ type Member = {
   identification_number: string | null;
 };
 
-type Province = { id: number; name: string };
-type District = { id: number; name: string; province_id: number };
-type LocalLevel = { id: number; name: string; district_id: number };
-
-const provinces: Province[] = [
-    { id: 1, name: "Koshi" },
-    { id: 2, name: "Madhesh" },
-    { id: 3, name: "Bagmati" },
-    { id: 4, name: "Gandaki" },
-    { id: 5, name: "Lumbini" },
-    { id: 6, name: "Karnali" },
-    { id: 7, name: "Sudur Paschim" },
-];
-
 const memberFormSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   email: z.string().email({ message: "Invalid email address." }).optional().or(z.literal('')),
@@ -84,9 +68,6 @@ const memberFormSchema = z.object({
   dob: z.date().optional().nullable(),
   nominee_name: z.string().optional(),
   nominee_relationship: z.string().optional(),
-  province_code: z.string().min(1, "Please select a province."),
-  district_code: z.string().min(1, "Please select a district."),
-  local_level_code: z.string().optional(),
   identification_type: z.string().optional(),
   identification_number: z.string().optional(),
 });
@@ -113,9 +94,6 @@ export function EditMember({ member }: { member: Member }) {
   const { toast } = useToast();
   const router = useRouter();
 
-  const [districts, setDistricts] = React.useState<District[]>([]);
-  const [localLevels, setLocalLevels] = React.useState<LocalLevel[]>([]);
-
   const form = useForm<MemberFormValues>({
     resolver: zodResolver(memberFormSchema),
     defaultValues: {
@@ -127,78 +105,10 @@ export function EditMember({ member }: { member: Member }) {
       dob: member.dob ? new Date(member.dob) : null,
       nominee_name: member.nominee_name || "",
       nominee_relationship: member.nominee_relationship || "",
-      province_code: member.province_code || "3",
-      district_code: member.district_code || "34",
-      local_level_code: member.local_level_code || "3408",
       identification_type: member.identification_type || "CITIZENSHIP",
       identification_number: member.identification_number || "",
     },
   });
-
-  const watchProvince = form.watch("province_code");
-  const watchDistrict = form.watch("district_code");
-
-  React.useEffect(() => {
-    const fetchData = async () => {
-        const provinceId = form.getValues("province_code") ? Number(form.getValues("province_code")) : null;
-        const districtId = form.getValues("district_code") ? Number(form.getValues("district_code")) : null;
-
-        if (provinceId) {
-            const districtsData = await getDistricts(provinceId);
-            setDistricts(districtsData);
-        }
-
-        if (districtId) {
-             const localLevelsData = await getLocalLevels(districtId);
-             setLocalLevels(localLevelsData);
-        }
-    };
-    if (open) {
-        fetchData();
-    }
-  }, [open, form]);
-
-  React.useEffect(() => {
-    const fetchDistrictsForProvince = async () => {
-        if (watchProvince) {
-            const districtsData = await getDistricts(Number(watchProvince));
-            setDistricts(districtsData);
-            form.setValue("district_code", "");
-            form.setValue("local_level_code", "");
-            setLocalLevels([]);
-        }
-    }
-    // This hook should only run when the user *changes* the province.
-    // The initial load is handled in the `open` effect.
-    const initialProvince = member.province_code;
-    if (watchProvince !== initialProvince) {
-        fetchDistrictsForProvince();
-    }
-  }, [watchProvince]);
-
-   React.useEffect(() => {
-    const fetchLocalLevelsForDistrict = async () => {
-        if (watchDistrict) {
-            const localLevelsData = await getLocalLevels(Number(watchDistrict));
-            setLocalLevels(localLevelsData);
-             if (localLevelsData.length > 0) {
-                const currentLocalLevel = form.getValues('local_level_code');
-                if(currentLocalLevel && !localLevelsData.some(l => l.id.toString() === currentLocalLevel)) {
-                    form.setValue("local_level_code", "");
-                }
-             } else {
-                 form.setValue("local_level_code", "");
-             }
-        } else {
-             setLocalLevels([]);
-             form.setValue("local_level_code", "");
-        }
-    }
-    const initialDistrict = member.district_code;
-    if (watchDistrict !== initialDistrict) {
-        fetchLocalLevelsForDistrict();
-    }
-  }, [watchDistrict]);
 
   const onSubmit = async (values: MemberFormValues) => {
     setIsSubmitting(true);
@@ -304,68 +214,6 @@ export function EditMember({ member }: { member: Member }) {
                 </FormItem>
               )}
             />
-             <div className="grid grid-cols-3 gap-4">
-                <FormField
-                  control={form.control}
-                  name="province_code"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Province</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || ""}>
-                            <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select Province" />
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                {provinces.map(p => <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="district_code"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>District</FormLabel>
-                       <Select onValueChange={field.onChange} value={field.value || ""} disabled={!watchProvince}>
-                            <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select District" />
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                {districts.map(d => <SelectItem key={d.id} value={d.id.toString()}>{d.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="local_level_code"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Local Level</FormLabel>
-                       <Select onValueChange={field.onChange} value={field.value || ""} disabled={localLevels.length === 0}>
-                            <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select Local Level" />
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                {localLevels.map(l => <SelectItem key={l.id} value={l.id.toString()}>{l.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-            </div>
             <div className="grid grid-cols-2 gap-4">
              <FormField
               control={form.control}

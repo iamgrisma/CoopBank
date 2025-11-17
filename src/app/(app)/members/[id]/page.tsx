@@ -1,4 +1,5 @@
 
+
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -21,12 +22,7 @@ import { calculateAccruedInterestForAllSavings } from "@/lib/saving-utils";
 async function getMember(supabase: SupabaseClient, id: string) {
   const { data: member, error } = await supabase
     .from("members")
-    .select(`
-      *, 
-      province:province_code(name), 
-      district:district_code(name), 
-      local_level:local_level_code(name)
-    `)
+    .select(`*`)
     .eq("id", id)
     .single();
   
@@ -181,13 +177,6 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
     acc[schemeName].deposits.push(saving);
     return acc;
   }, {} as Record<string, { deposits: typeof savings, interest_rate: number }>);
-  
-  const fullAddress = [
-    member.address,
-    member.local_level?.name,
-    member.district?.name,
-    member.province?.name
-  ].filter(Boolean).join(', ');
 
 
   return (
@@ -220,7 +209,7 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                     </div>
                     <div className="flex items-start gap-3">
                         <MapPin className="h-4 w-4 text-muted-foreground mt-1" />
-                        <span>{fullAddress || 'No address provided'}</span>
+                        <span>{member.address || 'No address provided'}</span>
                     </div>
                      <div className="flex items-center gap-3">
                         <Cake className="h-4 w-4 text-muted-foreground" />

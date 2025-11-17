@@ -34,11 +34,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { getDistricts, getLocalLevels } from "@/lib/data";
-
-type Province = { id: number; name: string };
-type District = { id: number; name: string; province_id: number };
-type LocalLevel = { id: number; name: string; district_id: number };
 
 const memberFormSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -49,20 +44,11 @@ const memberFormSchema = z.object({
   dob: z.date().optional(),
   nominee_name: z.string().optional(),
   nominee_relationship: z.string().optional(),
-  province_code: z.string().min(1, "Please select a province."),
-  district_code: z.string().min(1, "Please select a district."),
-  local_level_code: z.string().optional(),
   identification_type: z.string().optional(),
   identification_number: z.string().optional(),
 });
 
 type MemberFormValues = z.infer<typeof memberFormSchema>;
-
-interface AddMemberProps {
-    provinces: Province[];
-    districts: District[];
-    localLevels: LocalLevel[];
-}
 
 async function getNextAccountNumber() {
     const { count, error } = await supabase
@@ -89,14 +75,11 @@ async function addMemberToDb(member: Omit<MemberFormValues, 'join_date' | 'dob'>
     return data;
 }
 
-export function AddMember({ provinces, districts: allDistricts, localLevels: allLocalLevels }: AddMemberProps) {
+export function AddMember() {
   const [open, setOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { toast } = useToast();
   const router = useRouter();
-
-  const [districts, setDistricts] = React.useState<District[]>([]);
-  const [localLevels, setLocalLevels] = React.useState<LocalLevel[]>([]);
 
   const form = useForm<MemberFormValues>({
     resolver: zodResolver(memberFormSchema),
@@ -108,51 +91,19 @@ export function AddMember({ provinces, districts: allDistricts, localLevels: all
       join_date: new Date(),
       nominee_name: "",
       nominee_relationship: "",
-      province_code: "3", // Default to Bagmati
-      district_code: "34", // Default to Sindhuli
-      local_level_code: "3408", // Default to Kamalamai
       identification_type: "CITIZENSHIP",
       identification_number: "",
     },
   });
-
-   const watchProvince = form.watch("province_code");
-   const watchDistrict = form.watch("district_code");
-
-    React.useEffect(() => {
-        if (watchProvince) {
-            setDistricts(allDistricts.filter(d => d.province_id === Number(watchProvince)));
-            form.setValue("district_code", "");
-            form.setValue("local_level_code", "");
-            setLocalLevels([]);
-        }
-    }, [watchProvince, allDistricts, form]);
-
-    React.useEffect(() => {
-        if (watchDistrict) {
-            setLocalLevels(allLocalLevels.filter(l => l.district_id === Number(watchDistrict)));
-            form.setValue("local_level_code", "");
-        }
-    }, [watchDistrict, allLocalLevels, form]);
-
 
   const onSubmit = async (values: MemberFormValues) => {
     setIsSubmitting(true);
     try {
         const branchCode = "001";
         const nextAccNumPart = await getNextAccountNumber();
-        
         const savingTypeCode = "01"; 
-
-        const districtCodeForAcc = values.district_code.toString().padStart(2, '0');
-        
-        let localLevelCodeForAcc = '00';
-        if (values.local_level_code) {
-             const localLevel = localLevels.find(l => l.id.toString() === values.local_level_code);
-             if(localLevel) {
-                localLevelCodeForAcc = localLevel.id.toString().slice(-2).padStart(2, '0');
-             }
-        }
+        const districtCodeForAcc = "34"; // Defaulting as this is no longer in form
+        const localLevelCodeForAcc = '08'; // Defaulting as this is no longer in form
 
         const fullAccountNumber = `${branchCode}${districtCodeForAcc}${localLevelCodeForAcc}${savingTypeCode}${nextAccNumPart}`;
 
@@ -246,74 +197,12 @@ export function AddMember({ provinces, districts: allDistricts, localLevels: all
                 <FormItem>
                   <FormLabel>Address (Optional)</FormLabel>
                   <FormControl>
-                    <Input placeholder="Kathmandu, Nepal" {...field} />
+                    <Input placeholder="e.g. Kamalamai-5, Sindhuli" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-3 gap-4">
-                <FormField
-                  control={form.control}
-                  name="province_code"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Province</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select Province" />
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                {provinces.map(p => <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="district_code"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>District</FormLabel>
-                       <Select onValueChange={field.onChange} value={field.value} disabled={!watchProvince}>
-                            <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select District" />
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                {districts.map(d => <SelectItem key={d.id} value={d.id.toString()}>{d.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="local_level_code"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Local Level</FormLabel>
-                       <Select onValueChange={field.onChange} value={field.value || ""} disabled={localLevels.length === 0}>
-                            <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select Local Level" />
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                {localLevels.map(l => <SelectItem key={l.id} value={l.id.toString()}>{l.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-            </div>
             <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
