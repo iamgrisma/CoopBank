@@ -125,12 +125,18 @@ export function AddMember() {
 
   React.useEffect(() => {
     const fetchData = async () => {
-        // Initial fetch for districts and local levels based on defaults
-        const districtsData = await getDistricts(Number(form.getValues("province_code")));
-        setDistricts(districtsData);
-
-        const localLevelsData = await getLocalLevels(Number(form.getValues("district_code")));
-        setLocalLevels(localLevelsData);
+        const defaultProvinceId = Number(form.getValues("province_code"));
+        const defaultDistrictId = Number(form.getValues("district_code"));
+        
+        if (defaultProvinceId) {
+            const districtsData = await getDistricts(defaultProvinceId);
+            setDistricts(districtsData);
+        }
+        
+        if (defaultDistrictId) {
+            const localLevelsData = await getLocalLevels(defaultDistrictId);
+            setLocalLevels(localLevelsData);
+        }
     };
     if (open) {
         fetchData();
@@ -142,6 +148,7 @@ export function AddMember() {
         if (watchProvince) {
             const districtsData = await getDistricts(Number(watchProvince));
             setDistricts(districtsData);
+            // Only reset if the form has been interacted with
             if (form.formState.isDirty) {
               form.setValue("district_code", "");
               form.setValue("local_level_code", "");
@@ -155,16 +162,18 @@ export function AddMember() {
    React.useEffect(() => {
     const fetchLocalLevelsForDistrict = async () => {
         if (watchDistrict) {
-            if (watchDistrict === "34") { // Sindhuli
-                const localLevelsData = await getLocalLevels(Number(watchDistrict));
-                setLocalLevels(localLevelsData);
-                 if (form.formState.isDirty) {
-                    form.setValue("local_level_code", "");
-                }
-            } else {
-                setLocalLevels([]);
-                if (form.formState.isDirty) {
-                    form.setValue("local_level_code", "00");
+            const localLevelsData = await getLocalLevels(Number(watchDistrict));
+            setLocalLevels(localLevelsData);
+            if (form.formState.isDirty) {
+                // If local levels exist, don't clear it unless it needs to be
+                if (localLevelsData.length > 0) {
+                    // Check if the current local level is valid for the new district
+                    const currentLocalLevel = form.getValues('local_level_code');
+                    if(currentLocalLevel && !localLevelsData.some(l => l.id.toString() === currentLocalLevel)) {
+                        form.setValue("local_level_code", "");
+                    }
+                } else {
+                     form.setValue("local_level_code", "");
                 }
             }
         } else {
@@ -186,16 +195,12 @@ export function AddMember() {
         
         const savingTypeCode = "01"; 
 
-        const allDistricts = await getDistricts();
-        const districtCodeForAcc = allDistricts.find(d => d.id === Number(values.district_code))?.id.toString().padStart(2, '0') || '00';
+        const districtCodeForAcc = values.district_code.toString().padStart(2, '0') || '00';
         
-        // This is a bit of a hack since we only have local levels for one district
         let localLevelCodeForAcc = '00';
-        if (values.district_code === "34" && values.local_level_code) {
-             const allLocalLevels = await getLocalLevels(parseInt(values.district_code, 10));
-             localLevelCodeForAcc = allLocalLevels.find(l => l.id === Number(values.local_level_code))?.id.toString().slice(-2) || '00';
+        if (values.local_level_code) {
+             localLevelCodeForAcc = values.local_level_code.toString().slice(-2).padStart(2, '0');
         }
-
 
         const fullAccountNumber = `${branchCode}${districtCodeForAcc}${localLevelCodeForAcc}${savingTypeCode}${nextAccNumPart}`;
 
@@ -342,7 +347,7 @@ export function AddMember() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Local Level</FormLabel>
-                       <Select onValueChange={field.onChange} value={field.value} disabled={localLevels.length === 0}>
+                       <Select onValueChange={field.onChange} value={field.value || ""} disabled={localLevels.length === 0}>
                             <FormControl>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select Local Level" />
