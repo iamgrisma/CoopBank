@@ -37,7 +37,7 @@ export function RecentTransactions({ transactions }: { transactions: Transaction
   }
 
   return (
-    <Card className="lg:col-span-2">
+    <Card>
       <CardHeader>
         <CardTitle>Recent Transactions</CardTitle>
         <CardDescription>
@@ -49,9 +49,9 @@ export function RecentTransactions({ transactions }: { transactions: Transaction
           <TableHeader>
             <TableRow>
               <TableHead>Member</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Date</TableHead>
+              <TableHead className="hidden sm:table-cell">Type</TableHead>
+              <TableHead className="hidden sm:table-cell">Status</TableHead>
+              <TableHead className="hidden md:table-cell">Date</TableHead>
               <TableHead className="text-right">Amount</TableHead>
             </TableRow>
           </TableHeader>
@@ -60,9 +60,10 @@ export function RecentTransactions({ transactions }: { transactions: Transaction
               <TableRow key={transaction.id}>
                 <TableCell>
                   <div className="font-medium">{transaction.member_name}</div>
+                  <div className="block sm:hidden text-sm text-muted-foreground">{transaction.type}</div>
                 </TableCell>
-                <TableCell>{transaction.type}</TableCell>
-                <TableCell>
+                <TableCell className="hidden sm:table-cell">{transaction.type}</TableCell>
+                <TableCell className="hidden sm:table-cell">
                   <Badge 
                     variant={transaction.status === "Completed" ? "default" : "secondary"} 
                     className={transaction.status === "Completed" ? "bg-green-500/20 text-green-700 border-green-500/20 hover:bg-green-500/30 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/10" : "bg-yellow-500/20 text-yellow-700 border-yellow-500/20 hover:bg-yellow-500/30 dark:bg-yellow-500/10 dark:text-yellow-400 dark:border-yellow-500/10"}
@@ -70,7 +71,7 @@ export function RecentTransactions({ transactions }: { transactions: Transaction
                     {transaction.status}
                   </Badge>
                 </TableCell>
-                <TableCell>{format(new Date(transaction.date), "yyyy-MM-dd")}</TableCell>
+                <TableCell className="hidden md:table-cell">{format(new Date(transaction.date), "yyyy-MM-dd")}</TableCell>
                 <TableCell className="text-right">{formatCurrency(transaction.amount)}</TableCell>
               </TableRow>
             ))}
