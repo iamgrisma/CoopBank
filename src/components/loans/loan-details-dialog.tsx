@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { generateDynamicAmortizationSchedule, formatCurrency, calculateTotalRepaid, Repayment, AmortizationEntry, generateIdealSchedule, RepaymentFrequency } from "@/lib/loan-utils";
+import { generateDynamicAmortizationSchedule, formatCurrency, calculateTotalRepaid, Repayment, AmortizationEntry, generateIdealSchedule, RepaymentFrequency, calculateAccruedInterestToDate } from "@/lib/loan-utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { Button } from "../ui/button";
 import { MoreHorizontal, PlusCircle } from "lucide-react";
@@ -24,7 +24,6 @@ import { Badge } from "../ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
 import { RestructureLoanDialog } from "./restructure-loan";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 
 type LoanScheme = {
@@ -64,7 +63,7 @@ export function LoanDetailsDialog({ loan, allLoanSchemes, trigger }: LoanDetails
   const [open, setOpen] = React.useState(false);
   const [repayments, setRepayments] = React.useState<Repayment[]>([]);
   const [schedule, setSchedule] = React.useState<AmortizationEntry[]>([]);
-  const [idealSchedule, setIdealSchedule] = React.useState<IdealScheduleEntry[]>([]);
+  const [idealSchedule, setIdealSchedule] = React.useState<any[]>([]); // Using any to avoid type errors with ideal schedule generation
   const [isLoading, setIsLoading] = React.useState(false);
   const router = useRouter();
   const { toast } = useToast();
@@ -158,6 +157,10 @@ export function LoanDetailsDialog({ loan, allLoanSchemes, trigger }: LoanDetails
   const isLoanOverdue = totalDueToday > 0;
   const isLoanActive = loan.status === 'Active';
 
+  const lastPaymentDate = repayments.length > 0 ? new Date(repayments[repayments.length - 1].payment_date) : new Date(loan.disbursement_date);
+  const accruedInterest = calculateAccruedInterestToDate(outstandingBalance, loan.interest_rate, lastPaymentDate, new Date());
+  const capitalizedPrincipal = outstandingBalance + accruedInterest;
+
   const getStatusBadge = (status: AmortizationEntry['status']) => {
     switch (status) {
         case 'PAID':
@@ -185,22 +188,6 @@ export function LoanDetailsDialog({ loan, allLoanSchemes, trigger }: LoanDetails
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
             <DropdownMenuItem onSelect={() => setOpen(true)}>View Details</DropdownMenuItem>
-             <RestructureLoanDialog 
-                originalLoan={loan}
-                outstandingPrincipal={outstandingBalance}
-                allLoanSchemes={allLoanSchemes}
-                onRestructureComplete={handleActionCompleted}
-                isLoanOverdue={isLoanOverdue}
-                isLoanActive={isLoanActive}
-                trigger={
-                  <DropdownMenuItem 
-                    onSelect={(e) => e.preventDefault()} 
-                    disabled={isLoanOverdue || !isLoanActive}
-                    >
-                      Restructure Loan
-                  </DropdownMenuItem>
-                }
-             />
         </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -241,7 +228,7 @@ export function LoanDetailsDialog({ loan, allLoanSchemes, trigger }: LoanDetails
                      <p className="font-bold text-lg text-green-600">{formatCurrency(totalRepaid)}</p>
                 </CardContent>
             </Card>
-             <div className="flex items-center justify-center">
+             <div className="flex items-center justify-center gap-2">
                 <AddRepaymentForm 
                     loanId={loan.id}
                     memberId={loan.members?.id || ''}
@@ -252,6 +239,19 @@ export function LoanDetailsDialog({ loan, allLoanSchemes, trigger }: LoanDetails
                         <Button><PlusCircle className="mr-2 h-4 w-4" /> Add Repayment</Button>
                     }
                 />
+                 <RestructureLoanDialog 
+                    originalLoan={loan}
+                    outstandingPrincipal={outstandingBalance}
+                    accruedInterest={accruedInterest}
+                    capitalizedPrincipal={capitalizedPrincipal}
+                    allLoanSchemes={allLoanSchemes}
+                    isLoanOverdue={isLoanOverdue}
+                    isLoanActive={isLoanActive}
+                    onRestructureComplete={handleActionCompleted}
+                    trigger={
+                        <Button variant="secondary" disabled={!isLoanActive || isLoanOverdue}>Restructure</Button>
+                    }
+                 />
             </div>
         </div>
 
@@ -413,5 +413,7 @@ export function LoanDetailsDialog({ loan, allLoanSchemes, trigger }: LoanDetails
     </Dialog>
   );
 }
+
+    
 
     

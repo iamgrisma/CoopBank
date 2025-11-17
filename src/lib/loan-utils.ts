@@ -402,6 +402,25 @@ export const allocatePayment = (
     return allocation;
 };
 
+export const calculateAccruedInterestToDate = (
+    principal: number,
+    annualRate: number,
+    lastPaymentDate: Date,
+    calculationDate: Date
+): number => {
+    if (principal <= 0) return 0;
+
+    const daysSinceLastPayment = differenceInDays(calculationDate, lastPaymentDate);
+    if (daysSinceLastPayment <= 0) return 0;
+
+    const dailyRate = annualRate / 100 / 365;
+    const accruedInterest = principal * dailyRate * daysSinceLastPayment;
+
+    return accruedInterest;
+}
+
+    
+
     
 
     

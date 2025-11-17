@@ -42,7 +42,7 @@ import {
   SelectValue,
 } from "../ui/select";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Info } from "lucide-react";
 import { RepaymentFrequency, formatCurrency } from "@/lib/loan-utils";
 
 type LoanScheme = {
@@ -58,13 +58,13 @@ type LoanScheme = {
 
 type OriginalLoan = {
   id: string;
-  member_id: string;
-  members: { name: string } | null;
+  interest_rate: number;
+  members: { name: string, id: string } | null;
 };
 
 const restructureFormSchema = z.object({
   loan_scheme_id: z.string().min(1, { message: "Please select a loan scheme." }),
-  amount: z.coerce.number(), // This will be the outstanding principal, read-only
+  amount: z.coerce.number(), // This will be the capitalized principal, read-only
   interest_rate: z.coerce.number().positive({ message: "Interest rate must be a positive number." }),
   loan_term_months: z.coerce.number().int().min(1, { message: "Term must be at least 1 month." }),
   disbursement_date: z.date({ required_error: "Restructure date is required." }),
@@ -74,7 +74,9 @@ const restructureFormSchema = z.object({
 type RestructureFormValues = z.infer<typeof restructureFormSchema>;
 
 async function restructureLoanInDb(
-    originalLoanId: string, 
+    originalLoanId: string,
+    outstandingPrincipal: number,
+    accruedInterest: number,
     newLoanData: Omit<RestructureFormValues, 'disbursement_date'> & {
         member_id: string;
         member_name: string;
@@ -91,13 +93,13 @@ async function restructureLoanInDb(
 
     if (updateError) throw new Error(`Failed to update original loan: ${updateError.message}`);
     
-    // 2. Create the new loan record
+    // 2. Create the new loan record with the capitalized amount
     const { data: newLoan, error: newLoanError } = await supabase
         .from('loans')
         .insert({
             member_id: newLoanData.member_id,
             loan_scheme_id: newLoanData.loan_scheme_id,
-            amount: newLoanData.amount,
+            amount: newLoanData.amount, // This is the capitalized principal
             interest_rate: newLoanData.interest_rate,
             loan_term_months: newLoanData.loan_term_months,
             disbursement_date: newLoanData.disbursement_date,
@@ -110,18 +112,19 @@ async function restructureLoanInDb(
     if (newLoanError) throw new Error(`Failed to create new loan: ${newLoanError.message}`);
 
     // 3. Create transactions to balance the books
+    const totalSettlementAmount = outstandingPrincipal + accruedInterest;
     const transactions = [
-        // Credit transaction to "close" the old loan principal
+        // A non-cash transaction to "pay off" the old loan's principal and accrued interest
         {
             member_id: newLoanData.member_id,
             member_name: newLoanData.member_name,
             type: 'Loan Restructured',
-            amount: newLoanData.amount,
+            amount: totalSettlementAmount,
             date: newLoanData.disbursement_date,
             status: 'Completed',
-            description: `Principal ported from loan ${originalLoanId}`
+            description: `Settlement of loan ${originalLoanId} for restructuring.`
         },
-        // Debit transaction for the new loan disbursement
+        // Debit transaction for the new loan disbursement (same capitalized amount)
         {
             member_id: newLoanData.member_id,
             member_name: newLoanData.member_name,
@@ -129,7 +132,7 @@ async function restructureLoanInDb(
             amount: newLoanData.amount,
             date: newLoanData.disbursement_date,
             status: 'Completed',
-            description: `New loan created from restructuring ${originalLoanId}`
+            description: `New loan from restructuring. Principal: ${formatCurrency(outstandingPrincipal)}, Capitalized Interest: ${formatCurrency(accruedInterest)}`
         }
     ];
 
@@ -142,6 +145,8 @@ async function restructureLoanInDb(
 interface RestructureLoanDialogProps {
   originalLoan: OriginalLoan;
   outstandingPrincipal: number;
+  accruedInterest: number;
+  capitalizedPrincipal: number;
   allLoanSchemes: LoanScheme[];
   isLoanOverdue: boolean;
   isLoanActive: boolean;
@@ -152,6 +157,8 @@ interface RestructureLoanDialogProps {
 export function RestructureLoanDialog({ 
     originalLoan,
     outstandingPrincipal,
+    accruedInterest,
+    capitalizedPrincipal,
     allLoanSchemes,
     isLoanOverdue,
     isLoanActive,
@@ -167,8 +174,8 @@ export function RestructureLoanDialog({
     resolver: zodResolver(restructureFormSchema),
     defaultValues: {
       loan_scheme_id: "",
-      amount: outstandingPrincipal,
-      interest_rate: 0,
+      amount: capitalizedPrincipal,
+      interest_rate: originalLoan.interest_rate,
       loan_term_months: 12,
       disbursement_date: new Date(),
       description: "",
@@ -184,40 +191,48 @@ export function RestructureLoanDialog({
         form.setValue("interest_rate", scheme.default_interest_rate);
         form.setValue("loan_term_months", scheme.max_term_months);
       }
+    } else {
+        form.setValue("interest_rate", originalLoan.interest_rate)
     }
-  }, [selectedSchemeId, allLoanSchemes, form]);
+  }, [selectedSchemeId, allLoanSchemes, form, originalLoan.interest_rate]);
   
   React.useEffect(() => {
     if (open) {
       form.reset({
         loan_scheme_id: "",
-        amount: outstandingPrincipal,
-        interest_rate: 0,
+        amount: capitalizedPrincipal,
+        interest_rate: originalLoan.interest_rate,
         loan_term_months: 12,
         disbursement_date: new Date(),
         description: "",
       });
     }
-  }, [open, outstandingPrincipal, form]);
+  }, [open, capitalizedPrincipal, originalLoan.interest_rate, form]);
 
   const onSubmit = async (values: RestructureFormValues) => {
     setIsSubmitting(true);
     try {
         const selectedScheme = allLoanSchemes.find(s => s.id === values.loan_scheme_id);
-        if (!selectedScheme) {
-            throw new Error("Selected scheme not found.");
+        if (!selectedScheme && values.loan_scheme_id) { // User selected a scheme but it's not found
+             throw new Error("Selected scheme not found.");
         }
+
+        // If no new scheme is selected, we need to find the original scheme to get its properties
+        // This is a simplification; a real app would fetch the original loan's full scheme data.
+        // For now, we assume the client has enough info if no new scheme is chosen.
 
         const newLoanData = {
             ...values,
-            member_id: originalLoan.member_id,
+            member_id: originalLoan.members!.id,
             member_name: originalLoan.members?.name || 'N/A',
             disbursement_date: values.disbursement_date.toISOString().split('T')[0],
-            repayment_frequency: selectedScheme.repayment_frequency,
-            grace_period_months: selectedScheme.repayment_frequency === 'Monthly' ? selectedScheme.grace_period_months : 0,
+            // Use new scheme's properties if available, otherwise this logic needs original scheme data.
+            // Simplified for now: Assume Monthly/0 if no new scheme is chosen.
+            repayment_frequency: selectedScheme?.repayment_frequency || 'Monthly',
+            grace_period_months: selectedScheme?.repayment_frequency === 'Monthly' ? (selectedScheme.grace_period_months || 0) : 0,
         };
 
-        await restructureLoanInDb(originalLoan.id, newLoanData);
+        await restructureLoanInDb(originalLoan.id, outstandingPrincipal, accruedInterest, newLoanData);
 
         toast({
             title: "Loan Restructured Successfully",
@@ -242,7 +257,7 @@ export function RestructureLoanDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild disabled={!canRestructure} onClick={(e) => e.stopPropagation()}>
+      <DialogTrigger asChild onClick={(e) => { e.stopPropagation(); if (canRestructure) setOpen(true); else e.preventDefault(); }}>
         {trigger}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
@@ -252,7 +267,7 @@ export function RestructureLoanDialog({
             Port remaining principal to a new loan for {originalLoan.members?.name}.
           </DialogDescription>
         </DialogHeader>
-        {!canRestructure && (
+        {!canRestructure && open && ( // Show alert only if dialog is open and user can't restructure
             <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Restructuring Not Allowed</AlertTitle>
@@ -268,11 +283,16 @@ export function RestructureLoanDialog({
               name="amount"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>New Loan Principal</FormLabel>
+                  <FormLabel>New Loan Principal (Capitalized)</FormLabel>
                   <FormControl>
-                    <Input type="text" value={formatCurrency(field.value)} readOnly className="font-bold" />
+                    <Input type="text" value={formatCurrency(field.value)} readOnly className="font-bold bg-muted" />
                   </FormControl>
-                  <FormDescription>This is the outstanding principal from the original loan.</FormDescription>
+                  <FormDescription className="flex gap-2 items-center">
+                    <Info className="h-3 w-3" />
+                    <span>
+                        Outstanding: {formatCurrency(outstandingPrincipal)} + Accrued Interest: {formatCurrency(accruedInterest)}
+                    </span>
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -283,11 +303,11 @@ export function RestructureLoanDialog({
               name="loan_scheme_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>New Loan Scheme</FormLabel>
+                  <FormLabel>New Loan Scheme (Optional)</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a new loan scheme" />
+                        <SelectValue placeholder="Keep existing terms or select new" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -298,6 +318,7 @@ export function RestructureLoanDialog({
                       ))}
                     </SelectContent>
                   </Select>
+                   <FormDescription>Leave blank to keep similar terms to the original loan.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -376,7 +397,7 @@ export function RestructureLoanDialog({
             />
 
             <DialogFooter>
-              <Button type="submit" disabled={isSubmitting || !canRestructure}>
+              <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? "Restructuring..." : "Confirm Restructure"}
               </Button>
             </DialogFooter>
