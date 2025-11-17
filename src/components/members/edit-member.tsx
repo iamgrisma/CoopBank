@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -51,6 +52,9 @@ type Member = {
   nominee_name: string | null;
   nominee_relationship: string | null;
   photo_url: string | null;
+  province_code: string | null;
+  district_code: string | null;
+  local_level_code: string | null;
 };
 
 const memberFormSchema = z.object({
@@ -62,6 +66,9 @@ const memberFormSchema = z.object({
   dob: z.date().optional().nullable(),
   nominee_name: z.string().optional(),
   nominee_relationship: z.string().optional(),
+  province_code: z.string().length(1, "Must be 1 digit").regex(/^\d+$/, "Must be a digit"),
+  district_code: z.string().length(2, "Must be 2 digits").regex(/^\d+$/, "Must be digits"),
+  local_level_code: z.string().length(2, "Must be 2 digits").regex(/^\d+$/, "Must be digits"),
 });
 
 type MemberFormValues = z.infer<typeof memberFormSchema>;
@@ -96,7 +103,10 @@ export function EditMember({ member }: { member: Member }) {
       join_date: new Date(member.join_date),
       dob: member.dob ? new Date(member.dob) : null,
       nominee_name: member.nominee_name || "",
-      nominee_relationship: member.nominee_relationship || ""
+      nominee_relationship: member.nominee_relationship || "",
+      province_code: member.province_code || "1",
+      district_code: member.district_code || "01",
+      local_level_code: member.local_level_code || "01",
     },
   });
 
@@ -141,7 +151,7 @@ export function EditMember({ member }: { member: Member }) {
                 <DropdownMenuItem>Delete</DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Edit Member</DialogTitle>
           <DialogDescription>
@@ -202,6 +212,47 @@ export function EditMember({ member }: { member: Member }) {
                 </FormItem>
               )}
             />
+            <div className="grid grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="province_code"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Province</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. 1" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="district_code"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>District</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. 01" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={form.control}
+                  name="local_level_code"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Local Level</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. 01" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+            </div>
              <FormField
               control={form.control}
               name="join_date"

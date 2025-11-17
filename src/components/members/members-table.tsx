@@ -1,3 +1,4 @@
+
 "use client"
 
 import Link from "next/link"
@@ -24,6 +25,9 @@ type Member = {
   nominee_name: string | null;
   nominee_relationship: string | null;
   photo_url: string | null;
+  province_code: string | null;
+  district_code: string | null;
+  local_level_code: string | null;
 };
 
 const getInitials = (name: string | undefined) => {
