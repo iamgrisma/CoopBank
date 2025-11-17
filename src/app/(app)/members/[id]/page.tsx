@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
-import { AtSign, Cake, MapPin, Phone, PlusCircle } from "lucide-react";
+import { AtSign, Cake, MapPin, Phone, PlusCircle, TrendingUp } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AddShare } from "@/components/shares/add-share";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { LoanDetailsDialog } from "@/components/loans/loan-details-dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { calculateAccruedInterestForAllSavings } from "@/lib/saving-utils";
 
 async function getMember(id: string) {
   const supabase = createSupabaseServerClient();
@@ -55,7 +56,8 @@ async function getSavings(memberId: string) {
             saving_schemes (
                 id,
                 name,
-                type
+                type,
+                interest_rate
             )
         `)
         .eq('member_id', memberId)
@@ -146,15 +148,20 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
 
   const totalSavings = savings.reduce((acc, saving) => acc + saving.amount, 0);
   const totalLoanAmount = loans.reduce((acc, loan) => acc + loan.amount, 0);
+  
+  const totalAccruedInterest = calculateAccruedInterestForAllSavings(savings);
 
   const savingsByScheme = savings.reduce((acc, saving) => {
     const schemeName = saving.saving_schemes?.name || 'Uncategorized';
     if (!acc[schemeName]) {
-        acc[schemeName] = [];
+        acc[schemeName] = {
+            deposits: [],
+            interest_rate: saving.saving_schemes?.interest_rate || 0,
+        };
     }
-    acc[schemeName].push(saving);
+    acc[schemeName].deposits.push(saving);
     return acc;
-  }, {} as Record<string, typeof savings>);
+  }, {} as Record<string, { deposits: typeof savings, interest_rate: number }>);
 
 
   return (
@@ -267,14 +274,24 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                             </div>
                         </CardHeader>
                         <CardContent>
-                             <div className="mb-4 grid grid-cols-1 gap-4">
+                             <div className="mb-4 grid grid-cols-2 gap-4">
                                 <div className="p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
                                     <h3 className="text-sm font-medium text-muted-foreground">Total Savings Balance</h3>
                                     <p className="text-2xl font-bold">{formatCurrency(totalSavings)}</p>
                                 </div>
+                                 <Card className="bg-amber-50 dark:bg-amber-900/20">
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                        <CardTitle className="text-sm font-medium text-amber-800 dark:text-amber-400">Total Accrued Interest</CardTitle>
+                                        <TrendingUp className="h-4 w-4 text-amber-700 dark:text-amber-300" />
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-2xl font-bold text-amber-700 dark:text-amber-300">{formatCurrency(totalAccruedInterest)}</div>
+                                        <p className="text-xs text-amber-600 dark:text-amber-500">Interest earned but not yet paid out.</p>
+                                    </CardContent>
+                                </Card>
                             </div>
                            <Accordion type="multiple" className="w-full" defaultValue={Object.keys(savingsByScheme)}>
-                                {Object.entries(savingsByScheme).map(([schemeName, deposits]) => (
+                                {Object.entries(savingsByScheme).map(([schemeName, schemeData]) => (
                                     <AccordionItem value={schemeName} key={schemeName}>
                                         <AccordionTrigger className="text-lg font-semibold">{schemeName}</AccordionTrigger>
                                         <AccordionContent>
@@ -287,7 +304,7 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                                                     </TableRow>
                                                 </TableHeader>
                                                 <TableBody>
-                                                    {deposits.map(saving => (
+                                                    {schemeData.deposits.map(saving => (
                                                         <TableRow key={saving.id}>
                                                             <TableCell>{format(new Date(saving.deposit_date), "do MMM, yyyy")}</TableCell>
                                                             <TableCell>{saving.notes}</TableCell>
