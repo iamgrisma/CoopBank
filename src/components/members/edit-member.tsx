@@ -41,7 +41,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { getProvinces, getDistricts, getLocalLevels } from "@/lib/data";
+import { getDistricts, getLocalLevels } from "@/lib/data";
 
 type Member = {
   id: string;
@@ -64,6 +64,16 @@ type Member = {
 type Province = { id: number; name: string };
 type District = { id: number; name: string; province_id: number };
 type LocalLevel = { id: number; name: string; district_id: number };
+
+const provinces: Province[] = [
+    { id: 1, name: "Koshi" },
+    { id: 2, name: "Madhesh" },
+    { id: 3, name: "Bagmati" },
+    { id: 4, name: "Gandaki" },
+    { id: 5, name: "Lumbini" },
+    { id: 6, name: "Karnali" },
+    { id: 7, name: "Sudur Paschim" },
+];
 
 const memberFormSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -103,7 +113,6 @@ export function EditMember({ member }: { member: Member }) {
   const { toast } = useToast();
   const router = useRouter();
 
-  const [provinces, setProvinces] = React.useState<Province[]>([]);
   const [districts, setDistricts] = React.useState<District[]>([]);
   const [localLevels, setLocalLevels] = React.useState<LocalLevel[]>([]);
 
@@ -131,9 +140,6 @@ export function EditMember({ member }: { member: Member }) {
 
   React.useEffect(() => {
     const fetchData = async () => {
-        const provincesData = await getProvinces();
-        setProvinces(provincesData);
-        
         if (form.getValues("province_code")) {
             const districtsData = await getDistricts(Number(form.getValues("province_code")));
             setDistricts(districtsData);
@@ -157,6 +163,7 @@ export function EditMember({ member }: { member: Member }) {
             if (form.formState.isDirty) {
               form.setValue("district_code", "");
               form.setValue("local_level_code", "");
+              setLocalLevels([]);
             }
         }
     }
@@ -169,6 +176,9 @@ export function EditMember({ member }: { member: Member }) {
             if (watchDistrict === "34") { // Sindhuli
                 const localLevelsData = await getLocalLevels(Number(watchDistrict));
                 setLocalLevels(localLevelsData);
+                 if (form.formState.isDirty) {
+                    form.setValue("local_level_code", "");
+                }
             } else {
                 setLocalLevels([]);
                 if (form.formState.isDirty) {
@@ -477,3 +487,5 @@ export function EditMember({ member }: { member: Member }) {
     </Dialog>
   );
 }
+
+    

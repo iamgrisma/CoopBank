@@ -34,12 +34,21 @@ import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { getProvinces, getDistricts, getLocalLevels } from "@/lib/data";
+import { getDistricts, getLocalLevels } from "@/lib/data";
 
 type Province = { id: number; name: string };
 type District = { id: number; name: string; province_id: number };
 type LocalLevel = { id: number; name: string; district_id: number };
 
+const provinces: Province[] = [
+    { id: 1, name: "Koshi" },
+    { id: 2, name: "Madhesh" },
+    { id: 3, name: "Bagmati" },
+    { id: 4, name: "Gandaki" },
+    { id: 5, name: "Lumbini" },
+    { id: 6, name: "Karnali" },
+    { id: 7, name: "Sudur Paschim" },
+];
 
 const memberFormSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -84,20 +93,12 @@ async function addMemberToDb(member: Omit<MemberFormValues, 'join_date' | 'dob'>
     return data;
 }
 
-interface AddMemberProps {
-  provinces: Province[];
-  districts: District[];
-  localLevels: LocalLevel[];
-}
-
-
 export function AddMember() {
   const [open, setOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
-  const [provinces, setProvinces] = React.useState<Province[]>([]);
   const [districts, setDistricts] = React.useState<District[]>([]);
   const [localLevels, setLocalLevels] = React.useState<LocalLevel[]>([]);
 
@@ -124,9 +125,6 @@ export function AddMember() {
 
   React.useEffect(() => {
     const fetchData = async () => {
-        const provincesData = await getProvinces();
-        setProvinces(provincesData);
-        
         // Initial fetch for districts and local levels based on defaults
         const districtsData = await getDistricts(Number(form.getValues("province_code")));
         setDistricts(districtsData);
@@ -144,34 +142,39 @@ export function AddMember() {
         if (watchProvince) {
             const districtsData = await getDistricts(Number(watchProvince));
             setDistricts(districtsData);
-            form.setValue("district_code", "");
-            form.setValue("local_level_code", "");
-            setLocalLevels([]);
+            if (form.formState.isDirty) {
+              form.setValue("district_code", "");
+              form.setValue("local_level_code", "");
+              setLocalLevels([]);
+            }
         }
     }
-    if(form.formState.isDirty) {
-        fetchDistrictsForProvince();
-    }
+    fetchDistrictsForProvince();
   }, [watchProvince, form]);
 
    React.useEffect(() => {
     const fetchLocalLevelsForDistrict = async () => {
         if (watchDistrict) {
-            if (watchDistrict === "34") {
+            if (watchDistrict === "34") { // Sindhuli
                 const localLevelsData = await getLocalLevels(Number(watchDistrict));
                 setLocalLevels(localLevelsData);
+                 if (form.formState.isDirty) {
+                    form.setValue("local_level_code", "");
+                }
             } else {
                 setLocalLevels([]);
-                form.setValue("local_level_code", "00");
+                if (form.formState.isDirty) {
+                    form.setValue("local_level_code", "00");
+                }
             }
         } else {
              setLocalLevels([]);
-             form.setValue("local_level_code", "");
+             if (form.formState.isDirty) {
+                form.setValue("local_level_code", "");
+             }
         }
     }
-    if (form.formState.isDirty) {
-        fetchLocalLevelsForDistrict();
-    }
+    fetchLocalLevelsForDistrict();
   }, [watchDistrict, form]);
 
 
@@ -185,7 +188,13 @@ export function AddMember() {
 
         const allDistricts = await getDistricts();
         const districtCodeForAcc = allDistricts.find(d => d.id === Number(values.district_code))?.id.toString().padStart(2, '0') || '00';
-        const localLevelCodeForAcc = values.local_level_code === '00' ? '00' : (await getLocalLevels(parseInt(values.district_code, 10))).find(l => l.id === Number(values.local_level_code))?.id.toString().slice(-2) || '00';
+        
+        // This is a bit of a hack since we only have local levels for one district
+        let localLevelCodeForAcc = '00';
+        if (values.district_code === "34" && values.local_level_code) {
+             const allLocalLevels = await getLocalLevels(parseInt(values.district_code, 10));
+             localLevelCodeForAcc = allLocalLevels.find(l => l.id === Number(values.local_level_code))?.id.toString().slice(-2) || '00';
+        }
 
 
         const fullAccountNumber = `${branchCode}${districtCodeForAcc}${localLevelCodeForAcc}${savingTypeCode}${nextAccNumPart}`;
@@ -477,3 +486,5 @@ export function AddMember() {
     </Dialog>
   );
 }
+
+    
