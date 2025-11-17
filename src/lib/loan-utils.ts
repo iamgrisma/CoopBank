@@ -266,37 +266,32 @@ export const allocatePayment = (
         if (remainingAmount <= 0) break;
 
         // A. Pay Fine (if not waived)
-        if (!waiveFine) {
-            const outstandingFine = Math.max(0, installment.penalty - installment.penaltyPaid);
-            if (outstandingFine > 0) {
-                const amountToPay = Math.min(remainingAmount, outstandingFine);
-                allocation.fine += amountToPay;
-                remainingAmount -= amountToPay;
-            }
+        const outstandingFine = Math.max(0, installment.penalty - installment.penaltyPaid);
+        if (!waiveFine && outstandingFine > 0 && remainingAmount > 0) {
+            const amountToPay = Math.min(remainingAmount, outstandingFine);
+            allocation.fine += amountToPay;
+            remainingAmount -= amountToPay;
         }
-        if (remainingAmount <= 0) continue;
         
         // B. Pay Penal Interest
         const outstandingPenalInterest = Math.max(0, installment.penalInterest - installment.penalInterestPaid);
-        if (outstandingPenalInterest > 0) {
+        if (outstandingPenalInterest > 0 && remainingAmount > 0) {
             const amountToPay = Math.min(remainingAmount, outstandingPenalInterest);
             allocation.penalInterest += amountToPay;
             remainingAmount -= amountToPay;
         }
-        if (remainingAmount <= 0) continue;
 
         // C. Pay Regular Interest
         const outstandingInterest = Math.max(0, installment.interest - installment.interestPaid);
-        if (outstandingInterest > 0) {
+        if (outstandingInterest > 0 && remainingAmount > 0) {
             const amountToPay = Math.min(remainingAmount, outstandingInterest);
             allocation.interest += amountToPay;
             remainingAmount -= amountToPay;
         }
-        if (remainingAmount <= 0) continue;
 
         // D. Pay Principal
         const outstandingPrincipal = Math.max(0, installment.principal - installment.principalPaid);
-        if (outstandingPrincipal > 0) {
+        if (outstandingPrincipal > 0 && remainingAmount > 0) {
             const amountToPay = Math.min(remainingAmount, outstandingPrincipal);
             allocation.principal += amountToPay;
             remainingAmount -= amountToPay;
