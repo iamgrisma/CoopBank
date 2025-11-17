@@ -1,10 +1,11 @@
+
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
-import { AtSign, Cake, MapPin, Phone, PlusCircle, TrendingUp } from "lucide-react";
+import { AtSign, Cake, MapPin, Phone, PlusCircle, TrendingUp, UserCheck } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AddShare } from "@/components/shares/add-share";
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,7 @@ async function getMember(id: string) {
   const supabase = createSupabaseServerClient();
   const { data: member, error } = await supabase
     .from("members")
-    .select("*")
+    .select("*, district:districts(name), province:provinces(name), local_level:local_levels(name)")
     .eq("id", id)
     .single();
 
@@ -222,7 +223,7 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                     <TabsTrigger value="savings">Savings</TabsTrigger>
                     <TabsTrigger value="loans">Loans</TabsTrigger>
                     <TabsTrigger value="statement">Statement</TabsTrigger>
-                    <TabsTrigger value="details">Details</TabsTrigger>
+                    <TabsTrigger value="kyc">KYC</TabsTrigger>
                 </TabsList>
                 <TabsContent value="shares">
                     <Card>
@@ -394,31 +395,49 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                         </CardContent>
                     </Card>
                 </TabsContent>
-                <TabsContent value="details">
+                <TabsContent value="kyc">
                      <Card>
                         <CardHeader>
-                            <CardTitle>Personal & KYC Details</CardTitle>
+                            <CardTitle>KYC Details</CardTitle>
+                             <p className="text-muted-foreground">Detailed member information for compliance.</p>
                         </CardHeader>
                         <CardContent>
-                             <div className="grid gap-4">
-                                <div>
-                                    <h3 className="font-semibold mb-2">KYC Document</h3>
-                                    {member.kyc_document_url ? (
-                                        <div className="relative h-64 w-full">
-                                            <Image src={member.kyc_document_url} alt="KYC Document" fill objectFit="contain" className="rounded-md border"/>
-                                        </div>
-                                    ) : (
-                                        <p className="text-sm text-muted-foreground">No KYC document uploaded.</p>
-                                    )}
+                             <div className="grid gap-6">
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                      <h3 className="font-semibold mb-1 text-sm">Identification Document</h3>
+                                      <p className="text-sm">{member.identification_type || 'N/A'}: {member.identification_number || 'N/A'}</p>
+                                  </div>
+                                   <div>
+                                      <h3 className="font-semibold mb-1 text-sm">Issue Date</h3>
+                                      <p className="text-sm">{member.identification_issue_date ? format(new Date(member.identification_issue_date), "do MMMM, yyyy") : 'N/A'}</p>
+                                  </div>
                                 </div>
+                                <div className="grid grid-cols-2 gap-4">
                                  <div>
-                                    <h3 className="font-semibold mb-2">Nominee</h3>
+                                    <h3 className="font-semibold mb-1 text-sm">Nominee</h3>
                                     <p className="text-sm">{member.nominee_name || 'Not specified'}</p>
                                  </div>
                                 <div>
-                                    <h3 className="font-semibold mb-2">Nominee Relationship</h3>
+                                    <h3 className="font-semibold mb-1 text-sm">Nominee Relationship</h3>
                                     <p className="text-sm">{member.nominee_relationship || 'Not specified'}</p>
                                  </div>
+                                </div>
+                                <div>
+                                    <h3 className="font-semibold mb-2">KYC Document Scan</h3>
+                                    {member.kyc_document_url ? (
+                                        <div className="relative h-64 w-full">
+                                            <Image src={member.kyc_document_url} alt="KYC Document" fill style={{objectFit:"contain"}} className="rounded-md border"/>
+                                        </div>
+                                    ) : (
+                                        <div className="h-48 w-full rounded-md border-2 border-dashed flex items-center justify-center">
+                                          <div className="text-center text-muted-foreground">
+                                            <UserCheck className="mx-auto h-8 w-8" />
+                                            <p>No KYC document uploaded.</p>
+                                          </div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
@@ -429,3 +448,5 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
     </main>
   );
 }
+
+    
