@@ -1,3 +1,4 @@
+'use client';
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -107,7 +108,59 @@ function AccountsTable({ members }: { members: MemberWithAccounts[] }) {
     )
 }
 
-async function getMemberAccounts() {
+function AccountsPageClient({ allMembersWithAccounts }: { allMembersWithAccounts: MemberWithAccounts[] }) {
+    const filterAccounts = (type: Account['type'] | 'All') => {
+        if (type === 'All') return allMembersWithAccounts;
+        return allMembersWithAccounts
+            .map(member => ({
+                ...member,
+                accounts: member.accounts.filter(acc => acc.type === type)
+            }))
+            .filter(member => member.accounts.length > 0);
+    }
+    
+    const savingAccounts = filterAccounts('Saving');
+    const ltdAccounts = filterAccounts('LTD');
+    const loanAccounts = filterAccounts('Loan');
+    const currentAccounts = filterAccounts('Current');
+
+    return (
+    <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+        <div className="flex items-center">
+            <h1 className="font-semibold text-lg md:text-2xl">Member Accounts</h1>
+        </div>
+        
+        <Tabs defaultValue="all">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
+                <TabsTrigger value="all">All Accounts</TabsTrigger>
+                <TabsTrigger value="saving">Savings</TabsTrigger>
+                <TabsTrigger value="current">Current</TabsTrigger>
+                <TabsTrigger value="ltd">LTD</TabsTrigger>
+                <TabsTrigger value="loan">Loans</TabsTrigger>
+            </TabsList>
+            <TabsContent value="all">
+                <AccountsTable members={filterAccounts('All')} />
+            </TabsContent>
+            <TabsContent value="saving">
+                <AccountsTable members={savingAccounts} />
+            </TabsContent>
+             <TabsContent value="current">
+                <AccountsTable members={currentAccounts} />
+            </TabsContent>
+            <TabsContent value="ltd">
+                 <AccountsTable members={ltdAccounts} />
+            </TabsContent>
+            <TabsContent value="loan">
+                 <AccountsTable members={loanAccounts} />
+            </TabsContent>
+        </Tabs>
+
+    </main>
+  );
+}
+
+
+export default async function AccountsPage() {
     const supabase = createSupabaseServerClient();
     const { data: members, error: membersError } = await supabase
         .from('members')
@@ -116,7 +169,7 @@ async function getMemberAccounts() {
 
     if (membersError) {
         console.error('Error fetching members:', membersError);
-        return [];
+        return <AccountsPageClient allMembersWithAccounts={[]} />;
     }
 
     const memberIds = members.map(m => m.id);
@@ -192,59 +245,6 @@ async function getMemberAccounts() {
             }
         }
     }
-    return Array.from(membersMap.values());
-}
-
-
-export default async function AccountsPage() {
-    const allMembersWithAccounts = await getMemberAccounts();
-
-    const filterAccounts = (type: Account['type'] | 'All') => {
-        if (type === 'All') return allMembersWithAccounts;
-        return allMembersWithAccounts
-            .map(member => ({
-                ...member,
-                accounts: member.accounts.filter(acc => acc.type === type)
-            }))
-            .filter(member => member.accounts.length > 0);
-    }
-    
-    const savingAccounts = filterAccounts('Saving');
-    const ltdAccounts = filterAccounts('LTD');
-    const loanAccounts = filterAccounts('Loan');
-    const currentAccounts = filterAccounts('Current');
-
-    return (
-    <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-        <div className="flex items-center">
-            <h1 className="font-semibold text-lg md:text-2xl">Member Accounts</h1>
-        </div>
-        
-        <Tabs defaultValue="all">
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
-                <TabsTrigger value="all">All Accounts</TabsTrigger>
-                <TabsTrigger value="saving">Savings</TabsTrigger>
-                <TabsTrigger value="current">Current</TabsTrigger>
-                <TabsTrigger value="ltd">LTD</TabsTrigger>
-                <TabsTrigger value="loan">Loans</TabsTrigger>
-            </TabsList>
-            <TabsContent value="all">
-                <AccountsTable members={filterAccounts('All')} />
-            </TabsContent>
-            <TabsContent value="saving">
-                <AccountsTable members={savingAccounts} />
-            </TabsContent>
-             <TabsContent value="current">
-                <AccountsTable members={currentAccounts} />
-            </TabsContent>
-            <TabsContent value="ltd">
-                 <AccountsTable members={ltdAccounts} />
-            </TabsContent>
-            <TabsContent value="loan">
-                 <AccountsTable members={loanAccounts} />
-            </TabsContent>
-        </Tabs>
-
-    </main>
-  );
+    const allMembersWithAccounts = Array.from(membersMap.values());
+    return <AccountsPageClient allMembersWithAccounts={allMembersWithAccounts} />;
 }

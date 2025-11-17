@@ -18,39 +18,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-server"
 import { format } from "date-fns"
 import { formatCurrency } from "@/lib/utils";
 
-async function getJournalEntries() {
-    const supabase = createSupabaseServerClient();
-    const { data, error } = await supabase
-        .from('journal_entries')
-        .select(`
-            id,
-            date,
-            description,
-            reference_id,
-            reference_type,
-            journal_entry_items (
-                id,
-                type,
-                amount,
-                chart_of_accounts (
-                    name,
-                    code
-                )
-            )
-        `)
-        .order('date', { ascending: false })
-        .limit(50);
-
-    if (error) {
-        console.error("Error fetching journal entries:", error);
-        return [];
-    }
-    return data || [];
-}
-
-export default async function JournalsPage() {
-    const entries = await getJournalEntries();
-
+function JournalsClientPage({ entries }: { entries: any[] }) {
     return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         <div className="flex items-center">
@@ -116,4 +84,35 @@ export default async function JournalsPage() {
         </Card>
     </main>
   )
+}
+
+export default async function JournalsPage() {
+    const supabase = createSupabaseServerClient();
+    const { data, error } = await supabase
+        .from('journal_entries')
+        .select(`
+            id,
+            date,
+            description,
+            reference_id,
+            reference_type,
+            journal_entry_items (
+                id,
+                type,
+                amount,
+                chart_of_accounts (
+                    name,
+                    code
+                )
+            )
+        `)
+        .order('date', { ascending: false })
+        .limit(50);
+
+    if (error) {
+        console.error("Error fetching journal entries:", error);
+    }
+    const entries = data || [];
+
+    return <JournalsClientPage entries={entries} />;
 }

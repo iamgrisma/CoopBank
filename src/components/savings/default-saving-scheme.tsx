@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { addSchemeToDb } from "./add-saving-scheme";
+import { supabase } from "@/lib/supabase-client";
 
 type SavingScheme = {
   id: string;

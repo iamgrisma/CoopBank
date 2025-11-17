@@ -16,37 +16,16 @@ const formatCurrency = (amount: number) => {
     }).format(amount).replace('NPR', 'रु');
 }
 
-async function getFinancialSummary() {
-    const supabase = createSupabaseServerClient();
-    const [sharesRes, savingsRes, loansRes, transactionsRes] = await Promise.all([
-        supabase.from('shares').select('number_of_shares, face_value'),
-        supabase.from('savings').select('amount'),
-        supabase.from('loans').select('amount'),
-        supabase.from('transactions').select('type, amount')
-    ]);
-    
-    if (sharesRes.error || savingsRes.error || loansRes.error || transactionsRes.error) {
-        console.error({ sharesError: sharesRes.error, savingsError: savingsRes.error, loansError: loansRes.error, transactionsError: transactionsRes.error });
-        return { shareCapital: 0, totalSavings: 0, totalLoans: 0, interestIncome: 0, penaltyIncome: 0 };
-    }
-    
-    const shareCapital = (sharesRes.data || []).reduce((acc: number, s: any) => acc + (s.number_of_shares * s.face_value), 0);
-    const totalSavings = (savingsRes.data || []).reduce((acc: number, s: any) => acc + s.amount, 0);
-    const totalLoans = (loansRes.data || []).reduce((acc: number, l: any) => acc + l.amount, 0);
-    const interestIncome = (transactionsRes.data || [])
-        .filter(t => t.type === 'Loan Interest')
-        .reduce((acc, t) => acc + t.amount, 0);
-    const penaltyIncome = (transactionsRes.data || [])
-        .filter(t => t.type === 'Penalty Income')
-        .reduce((acc, t) => acc + t.amount, 0);
-    
-    return { shareCapital, totalSavings, totalLoans, interestIncome, penaltyIncome };
-}
+type FinancialSummary = {
+    shareCapital: number;
+    totalSavings: number;
+    totalLoans: number;
+    interestIncome: number;
+    penaltyIncome: number;
+};
 
-export default async function ReportsPage() {
-    const summary = await getFinancialSummary();
-
-  return (
+function ReportsClientPage({ summary }: { summary: FinancialSummary }) {
+    return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         <div className="flex items-center">
             <h1 className="font-semibold text-lg md:text-2xl">Financial Reports</h1>
@@ -120,4 +99,33 @@ export default async function ReportsPage() {
       </div>
     </main>
   )
+}
+
+export default async function ReportsPage() {
+    const supabase = createSupabaseServerClient();
+    const [sharesRes, savingsRes, loansRes, transactionsRes] = await Promise.all([
+        supabase.from('shares').select('number_of_shares, face_value'),
+        supabase.from('savings').select('amount'),
+        supabase.from('loans').select('amount'),
+        supabase.from('transactions').select('type, amount')
+    ]);
+    
+    let summary: FinancialSummary = { shareCapital: 0, totalSavings: 0, totalLoans: 0, interestIncome: 0, penaltyIncome: 0 };
+    if (sharesRes.error || savingsRes.error || loansRes.error || transactionsRes.error) {
+        console.error({ sharesError: sharesRes.error, savingsError: savingsRes.error, loansError: loansRes.error, transactionsError: transactionsRes.error });
+    } else {
+        const shareCapital = (sharesRes.data || []).reduce((acc: number, s: any) => acc + (s.number_of_shares * s.face_value), 0);
+        const totalSavings = (savingsRes.data || []).reduce((acc: number, s: any) => acc + s.amount, 0);
+        const totalLoans = (loansRes.data || []).reduce((acc: number, l: any) => acc + l.amount, 0);
+        const interestIncome = (transactionsRes.data || [])
+            .filter(t => t.type === 'Loan Interest')
+            .reduce((acc, t) => acc + t.amount, 0);
+        const penaltyIncome = (transactionsRes.data || [])
+            .filter(t => t.type === 'Penalty Income')
+            .reduce((acc, t) => acc + t.amount, 0);
+        
+        summary = { shareCapital, totalSavings, totalLoans, interestIncome, penaltyIncome };
+    }
+
+    return <ReportsClientPage summary={summary} />;
 }

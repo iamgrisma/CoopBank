@@ -15,12 +15,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { supabase } from "@/lib/supabase-client"
 
 export function UserNav() {
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     // Since auth is disabled, this can be a placeholder
     console.log("Log out clicked");
+    // With auth enabled, you would do:
+    // await supabase.auth.signOut();
   }
 
   const getInitials = (name: string | undefined) => {
@@ -32,6 +35,7 @@ export function UserNav() {
     return name.substring(0, 2);
   }
 
+  // Auth is disabled, so we use dummy data
   const userName = "Test User";
   const userEmail = "test@example.com";
 

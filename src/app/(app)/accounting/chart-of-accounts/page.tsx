@@ -17,34 +17,13 @@ import {
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { Badge } from "@/components/ui/badge";
 
-async function getChartOfAccounts() {
-    const supabase = createSupabaseServerClient();
-    const { data, error } = await supabase
-        .from('chart_of_accounts')
-        .select('*')
-        .order('code', { ascending: true });
+type Account = {
+    code: number;
+    name: string;
+    type: string;
+};
 
-    if (error) {
-        console.error("Error fetching chart of accounts:", error);
-        // Providing a default list in case the table doesn't exist yet
-        return [
-            { code: 1010, name: 'Cash', type: 'Asset' },
-            { code: 1100, name: 'Loans Receivable', type: 'Asset' },
-            { code: 2010, name: 'Savings Deposits', type: 'Liability' },
-            { code: 2100, name: 'Interest Payable', type: 'Liability' },
-            { code: 3010, name: 'Share Capital', type: 'Equity' },
-            { code: 3100, name: 'Retained Earnings', type: 'Equity' },
-            { code: 4010, name: 'Interest Income from Loans', type: 'Revenue' },
-            { code: 4020, name: 'Penalty Income', type: 'Revenue' },
-            { code: 5010, name: 'Interest Expense on Savings', type: 'Expense' },
-        ];
-    }
-    return data || [];
-}
-
-export default async function ChartOfAccountsPage() {
-    const accounts = await getChartOfAccounts();
-
+function ChartOfAccountsClientPage({ accounts }: { accounts: Account[] }) {
     const accountsByType = accounts.reduce((acc, account) => {
         const type = account.type || 'Uncategorized';
         if (!acc[type]) {
@@ -117,4 +96,33 @@ export default async function ChartOfAccountsPage() {
         </Card>
     </main>
   )
+}
+
+export default async function ChartOfAccountsPage() {
+    const supabase = createSupabaseServerClient();
+    const { data, error } = await supabase
+        .from('chart_of_accounts')
+        .select('*')
+        .order('code', { ascending: true });
+
+    let accounts: Account[] = [];
+    if (error) {
+        console.error("Error fetching chart of accounts:", error);
+        // Providing a default list in case the table doesn't exist yet
+        accounts = [
+            { code: 1010, name: 'Cash', type: 'Asset' },
+            { code: 1100, name: 'Loans Receivable', type: 'Asset' },
+            { code: 2010, name: 'Savings Deposits', type: 'Liability' },
+            { code: 2100, name: 'Interest Payable', type: 'Liability' },
+            { code: 3010, name: 'Share Capital', type: 'Equity' },
+            { code: 3100, name: 'Retained Earnings', type: 'Equity' },
+            { code: 4010, name: 'Interest Income from Loans', type: 'Revenue' },
+            { code: 4020, name: 'Penalty Income', type: 'Revenue' },
+            { code: 5010, name: 'Interest Expense on Savings', type: 'Expense' },
+        ];
+    } else {
+        accounts = data || [];
+    }
+
+    return <ChartOfAccountsClientPage accounts={accounts} />;
 }
