@@ -88,7 +88,7 @@ async function addRepaymentToDb(repayment: Omit<RepaymentFormValues, 'payment_da
       amount: allocation.interest,
       date: commonDetails.payment_date,
       status: 'Completed',
-      description: `Interest portion of repayment for loan ${commonDetails.loan_id}`
+      description: `Interest portion of loan repayment`
     });
   }
    if (allocation.penalInterest > 0) {
@@ -99,7 +99,7 @@ async function addRepaymentToDb(repayment: Omit<RepaymentFormValues, 'payment_da
       amount: allocation.penalInterest,
       date: commonDetails.payment_date,
       status: 'Completed',
-      description: `Penal interest portion of repayment for loan ${commonDetails.loan_id}`
+      description: `Penal interest portion of loan repayment`
     });
   }
   if (allocation.fine > 0 && !repayment.waive_fine) {
@@ -110,7 +110,7 @@ async function addRepaymentToDb(repayment: Omit<RepaymentFormValues, 'payment_da
       amount: allocation.fine,
       date: commonDetails.payment_date,
       status: 'Completed',
-      description: `Fine portion of repayment for loan ${commonDetails.loan_id}`
+      description: `Fine portion of loan repayment`
     });
   }
    if (allocation.principal > 0) {
@@ -121,7 +121,7 @@ async function addRepaymentToDb(repayment: Omit<RepaymentFormValues, 'payment_da
       amount: allocation.principal,
       date: commonDetails.payment_date,
       status: 'Completed',
-      description: `Principal portion of repayment for loan ${commonDetails.loan_id}`
+      description: `Principal portion of loan repayment`
     });
    }
 
@@ -137,7 +137,7 @@ async function addRepaymentToDb(repayment: Omit<RepaymentFormValues, 'payment_da
         member_id: commonDetails.member_id,
         amount: allocation.savings,
         deposit_date: commonDetails.payment_date,
-        notes: `Excess from loan repayment (Loan ID: ${commonDetails.loan_id})`,
+        notes: `Excess from loan repayment`,
     });
     if (savingsError) console.error(`Failed to deposit excess amount to savings: ${savingsError.message}`);
 
@@ -148,7 +148,7 @@ async function addRepaymentToDb(repayment: Omit<RepaymentFormValues, 'payment_da
         amount: allocation.savings,
         date: commonDetails.payment_date,
         status: 'Completed',
-        description: `Excess from loan repayment (Loan ID: ${commonDetails.loan_id})`,
+        description: `Excess from loan repayment`,
     });
     if (transactionError) console.error(`Failed to create savings transaction: ${transactionError.message}`);
   }
