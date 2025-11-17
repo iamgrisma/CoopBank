@@ -50,7 +50,7 @@ const schemeFormSchema = z.object({
 
 type SchemeFormValues = z.infer<typeof schemeFormSchema>;
 
-async function addSchemeToDb(scheme: SchemeFormValues) {
+export async function addSchemeToDb(scheme: SchemeFormValues) {
     const { data, error } = await supabase.from("saving_schemes").insert([scheme]).select();
     if (error) throw new Error(error.message);
     return data;

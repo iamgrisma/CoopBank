@@ -3,6 +3,7 @@ import { AddSavingScheme } from "@/components/savings/add-saving-scheme";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { DefaultSavingScheme } from "@/components/savings/default-saving-scheme";
 
 async function getSavingSchemes() {
     const supabase = createSupabaseServerClient();
@@ -25,7 +26,8 @@ export default async function SavingSchemesPage() {
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
       <div className="flex items-center">
         <h1 className="font-semibold text-lg md:text-2xl">Saving Schemes</h1>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+          <DefaultSavingScheme allSchemes={savingSchemes} />
           <AddSavingScheme 
             triggerButton={
               <Button>

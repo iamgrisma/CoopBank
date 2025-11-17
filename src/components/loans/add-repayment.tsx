@@ -36,7 +36,7 @@ import { cn } from "@/lib/utils";
 import { Textarea } from "../ui/textarea";
 import { AmortizationEntry, allocatePayment, formatCurrency } from "@/lib/loan-utils";
 import { Checkbox } from "../ui/checkbox";
-import { TooltipProvider } from "../ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 
 type Allocation = {
   principal: number;
@@ -131,15 +131,30 @@ async function addRepaymentToDb(repayment: Omit<RepaymentFormValues, 'payment_da
     if (transactionError) console.error(`Repayment added, but failed to create transactions: ${transactionError.message}`);
   }
 
-  // 3. If there's an excess, add it to savings
+  // 3. If there's an excess, add it to a default savings scheme
   if (allocation.savings > 0) {
+    // Get the default "General Savings" scheme ID
+    const { data: scheme, error: schemeError } = await supabase
+        .from('saving_schemes')
+        .select('id')
+        .eq('name', 'General Savings')
+        .single();
+    
+    if (schemeError || !scheme) {
+        throw new Error("Default 'General Savings' scheme not found. Please create it.");
+    }
+
     const { error: savingsError } = await supabase.from("savings").insert({
         member_id: commonDetails.member_id,
+        saving_scheme_id: scheme.id, // Use the fetched scheme ID
         amount: allocation.savings,
         deposit_date: commonDetails.payment_date,
         notes: `Excess from loan repayment`,
     });
-    if (savingsError) console.error(`Failed to deposit excess amount to savings: ${savingsError.message}`);
+    if (savingsError) {
+        console.error(`Failed to deposit excess amount to savings: ${savingsError.message}`);
+        throw new Error(`Failed to deposit excess amount to savings: ${savingsError.message}`);
+    }
 
     const { error: transactionError } = await supabase.from("transactions").insert({
         member_id: commonDetails.member_id,
@@ -367,11 +382,18 @@ export function AddRepaymentForm({ loanId, memberId, memberName, schedule, onRep
                       />
                     </FormControl>
                     <div className="space-y-1 leading-none">
-                      <FormLabel>
-                        Waive Fine
-                      </FormLabel>
+                       <Tooltip>
+                         <TooltipTrigger asChild>
+                           <FormLabel>
+                            Waive Fine
+                          </FormLabel>
+                         </TooltipTrigger>
+                         <TooltipContent>
+                           <p>The 5% penalty fine will be waived, but penal interest will still apply.</p>
+                         </TooltipContent>
+                       </Tooltip>
                       <FormDescription>
-                        Check this to waive the 5% fine amount (penal interest will still apply).
+                        Check this to waive the fixed penalty/fine amount.
                       </FormDescription>
                     </div>
                   </FormItem>
@@ -404,5 +426,3 @@ export function AddRepaymentForm({ loanId, memberId, memberName, schedule, onRep
     </TooltipProvider>
   );
 }
-
-    
