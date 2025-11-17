@@ -40,10 +40,10 @@ type NavItem = {
 
 
 const mainNavLinks: NavItem[] = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/members", label: "Members", icon: UsersRound },
-  { href: "/accounts", label: "Accounts", icon: Wallet },
-  { href: "/shares", label: "Shares", icon: Building },
+  { href: "/", label: "Dashboard", icon: LayoutDashboard, paths: ["/"] },
+  { href: "/members", label: "Members", icon: UsersRound, paths: ["/members"] },
+  { href: "/accounts", label: "Accounts", icon: Wallet, paths: ["/accounts"] },
+  { href: "/shares", label: "Shares", icon: Building, paths: ["/shares"] },
   { 
     label: "Savings", 
     icon: Wallet, 
@@ -71,7 +71,7 @@ const mainNavLinks: NavItem[] = [
         { href: "/accounting/chart-of-accounts", label: "Chart of Accounts" },
     ]
   },
-  { href: "/reports", label: "Reports", icon: FilePieChart },
+  { href: "/reports", label: "Reports", icon: FilePieChart, paths: ["/reports"] },
 ];
 
 
@@ -90,21 +90,19 @@ const MainNav = ({ isMobile = false }: { isMobile?: boolean }) => {
                             variant="ghost"
                             className={cn(
                                 "text-sm font-medium transition-colors hover:text-primary flex items-center gap-2 justify-start",
-                                isActive ? "text-primary" : "text-muted-foreground",
-                                isMobile ? "text-lg p-2 h-auto" : "p-2 h-auto"
+                                isActive ? "text-primary bg-accent" : "text-muted-foreground",
+                                isMobile ? "text-lg p-2 h-auto w-full" : "p-2 h-auto"
                             )}
                         >
                             <item.icon className="h-5 w-5" />
                             <span className={cn(isMobile ? "" : "hidden md:inline")}>{item.label}</span>
-                            <ChevronDown className="h-4 w-4" />
+                            <ChevronDown className="h-4 w-4 ml-auto" />
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
                         {item.subItems.map((subItem) => (
-                            <DropdownMenuItem key={subItem.href} asChild>
-                                <Link href={subItem.href!} onClick={() => isMobile && setOpen(false)}>
-                                    {subItem.label}
-                                </Link>
+                            <DropdownMenuItem key={subItem.href} href={subItem.href!} onClick={() => isMobile && setOpen(false)}>
+                                {subItem.label}
                             </DropdownMenuItem>
                         ))}
                     </DropdownMenuContent>
@@ -122,7 +120,7 @@ const MainNav = ({ isMobile = false }: { isMobile?: boolean }) => {
                             className={cn(
                                 "text-sm font-medium transition-colors hover:text-primary flex items-center gap-2",
                                 isActive ? "text-primary" : "text-muted-foreground",
-                                isMobile ? "text-lg p-2" : ""
+                                isMobile ? "text-lg p-2 rounded-md hover:bg-accent" : "rounded-md p-2"
                             )}
                         >
                             <item.icon className="h-5 w-5" />
@@ -153,7 +151,7 @@ const MainNav = ({ isMobile = false }: { isMobile?: boolean }) => {
                     </Button>
                 </SheetTrigger>
                 <SheetContent side="left">
-                    <nav className="grid gap-6 text-lg font-medium mt-8">
+                    <nav className="grid gap-2 text-lg font-medium mt-8">
                          {mainNavLinks.map((link) => (
                             <NavLink key={link.label} item={link} />
                          ))}
