@@ -31,7 +31,6 @@ type Member = {
   photo_url: string | null;
   identification_type: string | null;
   identification_number: string | null;
-  identification_issue_date: string | null;
   kyc_document_url: string | null;
   account_number: string | null;
 };
@@ -291,6 +290,7 @@ export default function MemberProfileClientPage({
                             </div>
                             <div className="ml-auto flex items-center gap-2 mt-2 sm:mt-0">
                                  <AddLoan
+                                    members={[{id: member.id, name: member.name!}]}
                                     loanSchemes={loanSchemes}
                                     defaultMember={{ id: member.id, name: member.name || '' }}
                                     triggerButton={<Button size="sm"><PlusCircle className="mr-0 sm:mr-2 h-4 w-4" /><span className="hidden sm:inline">Add Loan</span></Button>}
