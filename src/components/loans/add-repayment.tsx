@@ -209,7 +209,10 @@ export function AddRepaymentForm({ loanId, memberId, memberName, schedule, onRep
   const watchAmount = form.watch("amount_paid");
   const watchWaiveFine = form.watch("waive_fine");
 
-  const allocation = allocatePayment(watchAmount, overdueInstallments, watchWaiveFine);
+  const allocation = React.useMemo(() => {
+    return allocatePayment(watchAmount, overdueInstallments, watchWaiveFine);
+  }, [watchAmount, overdueInstallments, watchWaiveFine]);
+
 
   const onSubmit = async (values: RepaymentFormValues) => {
     if (!allocation) {
