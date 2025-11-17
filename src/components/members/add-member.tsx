@@ -40,16 +40,6 @@ type Province = { id: number; name: string };
 type District = { id: number; name: string; province_id: number };
 type LocalLevel = { id: number; name: string; district_id: number };
 
-const provinces: Province[] = [
-    { id: 1, name: "Koshi" },
-    { id: 2, name: "Madhesh" },
-    { id: 3, name: "Bagmati" },
-    { id: 4, name: "Gandaki" },
-    { id: 5, name: "Lumbini" },
-    { id: 6, name: "Karnali" },
-    { id: 7, name: "Sudur Paschim" },
-];
-
 const memberFormSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   email: z.string().email({ message: "Invalid email address." }).optional().or(z.literal('')),
@@ -67,6 +57,12 @@ const memberFormSchema = z.object({
 });
 
 type MemberFormValues = z.infer<typeof memberFormSchema>;
+
+interface AddMemberProps {
+    provinces: Province[];
+    districts: District[];
+    localLevels: LocalLevel[];
+}
 
 async function getNextAccountNumber() {
     const { count, error } = await supabase
@@ -93,7 +89,7 @@ async function addMemberToDb(member: Omit<MemberFormValues, 'join_date' | 'dob'>
     return data;
 }
 
-export function AddMember() {
+export function AddMember({ provinces, districts: allDistricts, localLevels: allLocalLevels }: AddMemberProps) {
   const [open, setOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { toast } = useToast();
@@ -123,65 +119,21 @@ export function AddMember() {
    const watchProvince = form.watch("province_code");
    const watchDistrict = form.watch("district_code");
 
-  React.useEffect(() => {
-    const fetchData = async () => {
-        const provinceId = Number(form.getValues("province_code"));
-        const districtId = Number(form.getValues("district_code"));
-        
-        if (provinceId) {
-            const districtsData = await getDistricts(provinceId);
-            setDistricts(districtsData);
-        }
-        
-        if (districtId) {
-            const localLevelsData = await getLocalLevels(districtId);
-            setLocalLevels(localLevelsData);
-        }
-    };
-    if (open) {
-        fetchData();
-    }
-  }, [open, form]);
-
-  React.useEffect(() => {
-    const fetchDistrictsForProvince = async () => {
+    React.useEffect(() => {
         if (watchProvince) {
-            const districtsData = await getDistricts(Number(watchProvince));
-            setDistricts(districtsData);
+            setDistricts(allDistricts.filter(d => d.province_id === Number(watchProvince)));
             form.setValue("district_code", "");
             form.setValue("local_level_code", "");
             setLocalLevels([]);
         }
-    }
-    // Only run this effect if the province is changed by the user
-    if (form.formState.isDirty) {
-        fetchDistrictsForProvince();
-    }
-  }, [watchProvince]);
+    }, [watchProvince, allDistricts, form]);
 
-   React.useEffect(() => {
-    const fetchLocalLevelsForDistrict = async () => {
+    React.useEffect(() => {
         if (watchDistrict) {
-            const localLevelsData = await getLocalLevels(Number(watchDistrict));
-            setLocalLevels(localLevelsData);
-             if (localLevelsData.length > 0) {
-                const currentLocalLevel = form.getValues('local_level_code');
-                if(currentLocalLevel && !localLevelsData.some(l => l.id.toString() === currentLocalLevel)) {
-                    form.setValue("local_level_code", "");
-                }
-             } else {
-                 form.setValue("local_level_code", "");
-             }
-        } else {
-             setLocalLevels([]);
-             form.setValue("local_level_code", "");
+            setLocalLevels(allLocalLevels.filter(l => l.district_id === Number(watchDistrict)));
+            form.setValue("local_level_code", "");
         }
-    }
-    // Only run this effect if the district is changed by the user
-    if (form.formState.isDirty) {
-        fetchLocalLevelsForDistrict();
-    }
-  }, [watchDistrict]);
+    }, [watchDistrict, allLocalLevels, form]);
 
 
   const onSubmit = async (values: MemberFormValues) => {
@@ -491,5 +443,3 @@ export function AddMember() {
     </Dialog>
   );
 }
-
-    
