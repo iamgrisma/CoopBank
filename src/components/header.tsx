@@ -13,6 +13,7 @@ import {
   Globe,
   Menu,
   ChevronDown,
+  Building,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -42,8 +43,16 @@ const mainNavLinks: NavItem[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/members", label: "Members", icon: UsersRound },
   { href: "/accounts", label: "Accounts", icon: Wallet },
-  { href: "/shares", label: "Shares", icon: Wallet },
-  { href: "/savings", label: "Savings", icon: Wallet, paths: ['/savings', '/savings/schemes']},
+  { href: "/shares", label: "Shares", icon: Building },
+  { 
+    label: "Savings", 
+    icon: Wallet, 
+    paths: ['/savings', '/savings/schemes'],
+    subItems: [
+      { href: "/savings", label: "All Savings" },
+      { href: "/savings/schemes", label: "Saving Schemes" },
+    ]
+  },
   { 
     label: "Loans", 
     icon: HandCoins, 
@@ -53,7 +62,15 @@ const mainNavLinks: NavItem[] = [
       { href: "/loans/schemes", label: "Loan Schemes" },
     ] 
   },
-  { href: "/accounting/journals", label: "Journals", icon: BookOpenCheck, paths: ['/accounting/journals', '/accounting/chart-of-accounts'] },
+  { 
+    label: "Accounting", 
+    icon: BookOpenCheck, 
+    paths: ['/accounting/journals', '/accounting/chart-of-accounts'],
+    subItems: [
+        { href: "/accounting/journals", label: "Journal Entries" },
+        { href: "/accounting/chart-of-accounts", label: "Chart of Accounts" },
+    ]
+  },
   { href: "/reports", label: "Reports", icon: FilePieChart },
 ];
 
@@ -63,7 +80,7 @@ const MainNav = ({ isMobile = false }: { isMobile?: boolean }) => {
     const [open, setOpen] = useState(false);
 
     const NavLink = ({ item }: { item: NavItem }) => {
-        const isActive = item.href === pathname || (item.paths && item.paths.includes(pathname));
+        const isActive = item.href === pathname || (item.paths && item.paths.some(p => pathname.startsWith(p)));
 
         if (item.subItems) {
             return (
@@ -74,7 +91,7 @@ const MainNav = ({ isMobile = false }: { isMobile?: boolean }) => {
                             className={cn(
                                 "text-sm font-medium transition-colors hover:text-primary flex items-center gap-2 justify-start",
                                 isActive ? "text-primary" : "text-muted-foreground",
-                                isMobile ? "text-lg p-2" : "p-2 h-auto"
+                                isMobile ? "text-lg p-2 h-auto" : "p-2 h-auto"
                             )}
                         >
                             <item.icon className="h-5 w-5" />
