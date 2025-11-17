@@ -14,10 +14,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { generateDynamicAmortizationSchedule, formatCurrency, calculateTotalRepaid, Repayment, AmortizationEntry, generateIdealSchedule, RepaymentFrequency, calculateAccruedInterestToDate } from "@/lib/loan-utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { Button } from "../ui/button";
-import { MoreHorizontal, PlusCircle } from "lucide-react";
+import { MoreHorizontal, PlusCircle, HandCoins } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
 import { useRouter } from "next/navigation";
-import { format } from "date-fns";
+import { format, isPast } from "date-fns";
 import { AddRepaymentForm } from "./add-repayment";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "../ui/badge";
@@ -25,7 +25,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
 import { RestructureLoanDialog } from "./restructure-loan";
 import { Skeleton } from "../ui/skeleton";
-
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "../ui/alert-dialog";
 
 type LoanScheme = {
   id: string;
@@ -54,6 +54,15 @@ type Loan = {
   } | null;
 };
 
+type Saving = {
+  amount: number;
+  saving_schemes: {
+    type: string;
+    lock_in_period_years: number | null;
+  } | null;
+  deposit_date: string;
+}
+
 interface LoanDetailsDialogProps {
   loan: Loan;
   allLoanSchemes: LoanScheme[];
@@ -63,38 +72,45 @@ interface LoanDetailsDialogProps {
 export function LoanDetailsDialog({ loan, allLoanSchemes, trigger }: LoanDetailsDialogProps) {
   const [open, setOpen] = React.useState(false);
   const [repayments, setRepayments] = React.useState<Repayment[]>([]);
+  const [savings, setSavings] = React.useState<Saving[]>([]);
   const [schedule, setSchedule] = React.useState<AmortizationEntry[]>([]);
   const [idealSchedule, setIdealSchedule] = React.useState<any[]>([]); // Using any to avoid type errors with ideal schedule generation
   const [isLoading, setIsLoading] = React.useState(true);
+  const [isPayingOff, setIsPayingOff] = React.useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
   const fetchLoanData = React.useCallback(async () => {
-    if (!loan.id) return;
+    if (!loan.id || !loan.members?.id) return;
     setIsLoading(true);
     
     try {
-      const { data: repaymentData, error: repaymentError } = await supabase
-        .from('loan_repayments')
-        .select('*')
-        .eq('loan_id', loan.id)
-        .order('payment_date', { ascending: true });
+      const [repaymentRes, savingsRes] = await Promise.all([
+        supabase.from('loan_repayments').select('*').eq('loan_id', loan.id).order('payment_date', { ascending: true }),
+        supabase.from('savings').select('amount, deposit_date, saving_schemes(type, lock_in_period_years)').eq('member_id', loan.members.id)
+      ]);
+      
+      const { data: repaymentData, error: repaymentError } = repaymentRes;
+      const { data: savingsData, error: savingsError } = savingsRes;
 
-      if (repaymentError) {
+      if (repaymentError || savingsError) {
         toast({
             variant: "destructive",
             title: "Database Error",
-            description: "Could not fetch repayment history. The database may be out of date. Please run 'npm run db:full-setup' in your terminal and try again.",
+            description: `Could not fetch details. ${repaymentError?.message || savingsError?.message}`,
             duration: 10000,
         });
         setRepayments([]);
+        setSavings([]);
         setSchedule([]);
         setIdealSchedule([]);
         return;
       }
 
       const fetchedRepayments = repaymentData || [];
+      const fetchedSavings = savingsData || [];
       setRepayments(fetchedRepayments);
+      setSavings(fetchedSavings);
       
       const frequency = loan.repayment_frequency || loan.loan_schemes?.repayment_frequency || 'Monthly';
       const gracePeriod = loan.grace_period_months ?? loan.loan_schemes?.grace_period_months ?? 0;
@@ -128,6 +144,7 @@ export function LoanDetailsDialog({ loan, allLoanSchemes, trigger }: LoanDetails
             duration: 10000,
         });
         setRepayments([]);
+        setSavings([]);
         setSchedule([]);
         setIdealSchedule([]);
     } finally {
@@ -146,6 +163,67 @@ export function LoanDetailsDialog({ loan, allLoanSchemes, trigger }: LoanDetails
       fetchLoanData();
       router.refresh();
   }
+  
+  const handlePayoff = async () => {
+      setIsPayingOff(true);
+      try {
+          const totalPayoffAmount = outstandingBalance + accruedInterest;
+          const memberId = loan.members?.id;
+          const memberName = loan.members?.name;
+
+          if (!memberId || !memberName) throw new Error("Member information is missing.");
+          if (totalPayoffAmount <= 0) throw new Error("Loan has no outstanding balance to pay off.");
+          if (availableSavings < totalPayoffAmount) throw new Error("Insufficient savings balance to pay off the loan.");
+          
+          const today = new Date().toISOString().split('T')[0];
+
+          // 1. Record the withdrawal from savings
+          const { error: withdrawalError } = await supabase.from('withdrawals').insert({
+              member_id: memberId,
+              amount: totalPayoffAmount,
+              withdrawal_date: today,
+              notes: `Loan payoff for loan ID: ${loan.id}`
+          });
+          if (withdrawalError) throw new Error(`Failed to record withdrawal: ${withdrawalError.message}`);
+
+          // 2. Create the corresponding withdrawal transaction
+           const { error: transactionError } = await supabase.from('transactions').insert({
+              member_id: memberId,
+              member_name: memberName,
+              type: 'Savings Withdrawal',
+              amount: totalPayoffAmount,
+              date: today,
+              status: 'Completed',
+              description: `Loan payoff for loan ID: ${loan.id}`
+          });
+          if (transactionError) throw new Error(`Failed to create withdrawal transaction: ${transactionError.message}`);
+
+          // 3. Create the final repayment record
+          const { error: repaymentError } = await supabase.from('loan_repayments').insert({
+              loan_id: loan.id,
+              amount_paid: totalPayoffAmount,
+              payment_date: today,
+              principal_paid: outstandingBalance,
+              interest_paid: accruedInterest,
+              penal_interest_paid: 0,
+              penalty_paid: 0,
+              notes: 'Loan paid off from savings account'
+          });
+          if (repaymentError) throw new Error(`Failed to create final repayment: ${repaymentError.message}`);
+
+          // 4. Update loan status to 'Paid Off'
+          const { error: updateError } = await supabase.from('loans').update({ status: 'Paid Off' }).eq('id', loan.id);
+          if (updateError) throw new Error(`Failed to update loan status: ${updateError.message}`);
+
+          toast({ title: "Success", description: "Loan has been paid off successfully." });
+          handleActionCompleted();
+          setOpen(false); // Close the dialog on success
+      } catch (error: any) {
+          toast({ variant: "destructive", title: "Payoff Failed", description: error.message });
+      } finally {
+          setIsPayingOff(false);
+      }
+  };
 
   const totalRepaid = calculateTotalRepaid(repayments);
   const totalPrincipalRepaid = repayments.reduce((acc, p) => acc + p.principal_paid, 0);
@@ -161,6 +239,23 @@ export function LoanDetailsDialog({ loan, allLoanSchemes, trigger }: LoanDetails
   const lastPaymentDate = repayments.length > 0 ? new Date(repayments[repayments.length - 1].payment_date) : new Date(loan.disbursement_date);
   const accruedInterest = calculateAccruedInterestToDate(outstandingBalance, loan.interest_rate, lastPaymentDate, new Date());
   const capitalizedPrincipal = outstandingBalance + accruedInterest;
+
+  const availableSavings = savings.reduce((acc, s) => {
+    if (s.saving_schemes?.type === 'Current' || s.saving_schemes?.type === 'Daily') {
+        return acc + s.amount;
+    }
+    if (s.saving_schemes?.type === 'LTD' && s.saving_schemes.lock_in_period_years) {
+        const maturityDate = new Date(s.deposit_date);
+        maturityDate.setFullYear(maturityDate.getFullYear() + s.saving_schemes.lock_in_period_years);
+        if (isPast(maturityDate)) {
+            return acc + s.amount;
+        }
+    }
+    return acc;
+  }, 0);
+
+  const canPayoff = isLoanActive && (outstandingBalance > 0) && (availableSavings >= capitalizedPrincipal);
+
 
   const getStatusBadge = (status: AmortizationEntry['status']) => {
     switch (status) {
@@ -229,7 +324,7 @@ export function LoanDetailsDialog({ loan, allLoanSchemes, trigger }: LoanDetails
                      {isLoading ? <Skeleton className="h-7 w-3/4" /> : <p className="font-bold text-lg text-green-600">{formatCurrency(totalRepaid)}</p>}
                 </CardContent>
             </Card>
-             <div className="flex items-center justify-center gap-2">
+             <div className="flex items-center justify-center gap-2 flex-wrap">
                 <AddRepaymentForm 
                     loanId={loan.id}
                     memberId={loan.members?.id || ''}
@@ -237,7 +332,7 @@ export function LoanDetailsDialog({ loan, allLoanSchemes, trigger }: LoanDetails
                     schedule={schedule}
                     onRepaymentAdded={handleActionCompleted}
                     triggerButton={
-                        <Button disabled={isLoading}><PlusCircle className="mr-2 h-4 w-4" /> Add Repayment</Button>
+                        <Button disabled={isLoading || !isLoanActive}><PlusCircle className="mr-2 h-4 w-4" /> Add Repayment</Button>
                     }
                 />
                  <RestructureLoanDialog 
@@ -253,6 +348,31 @@ export function LoanDetailsDialog({ loan, allLoanSchemes, trigger }: LoanDetails
                         <Button variant="secondary" disabled={isLoading || !isLoanActive || isLoanOverdue}>Restructure</Button>
                     }
                  />
+                 <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="outline" disabled={isLoading || !canPayoff} className="border-green-600 text-green-700 hover:bg-green-50 hover:text-green-800">
+                            <HandCoins className="mr-2 h-4 w-4" /> Payoff from Savings
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Confirm Loan Payoff</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                <div className="space-y-2">
+                                  <p>Are you sure you want to pay off this loan using the member's savings?</p>
+                                  <p className="font-semibold">Total Payoff Amount: <span className="font-mono">{formatCurrency(capitalizedPrincipal)}</span></p>
+                                  <p className="font-semibold">Available Savings: <span className="font-mono">{formatCurrency(availableSavings)}</span></p>
+                                </div>
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handlePayoff} disabled={isPayingOff}>
+                                {isPayingOff ? "Processing..." : "Confirm Payoff"}
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                 </AlertDialog>
             </div>
         </div>
 
@@ -414,5 +534,4 @@ export function LoanDetailsDialog({ loan, allLoanSchemes, trigger }: LoanDetails
     </Dialog>
   );
 }
-
     
