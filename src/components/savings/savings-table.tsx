@@ -1,3 +1,4 @@
+
 "use client"
 
 import Link from "next/link"
@@ -37,48 +38,48 @@ const formatCurrency = (amount: number) => {
 export function SavingsTable({ savings }: { savings: Saving[] }) {
   return (
     <div className="rounded-lg border shadow-sm overflow-hidden">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Member</TableHead>
-            <TableHead className="hidden sm:table-cell">Scheme</TableHead>
-            <TableHead className="hidden md:table-cell">Deposit Date</TableHead>
-            <TableHead className="hidden lg:table-cell">Notes</TableHead>
-            <TableHead className="text-right">Amount</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {savings.length === 0 ? (
-            <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
-                    No savings deposits found.
-                </TableCell>
-            </TableRow>
-          ) : (
-            savings.map((saving) => (
-              <TableRow key={saving.id}>
-                <TableCell>
-                  {saving.members ? (
-                     <Link href={`/members/${saving.members.id}`} className="hover:underline text-primary font-medium">
-                        {saving.members.name}
-                     </Link>
-                  ) : (
-                    <span className="text-muted-foreground">N/A</span>
-                  )}
-                </TableCell>
-                <TableCell className="hidden sm:table-cell">{saving.saving_schemes?.name}</TableCell>
-                <TableCell className="hidden md:table-cell">
-                  {format(new Date(saving.deposit_date), "yyyy-MM-dd")}
-                </TableCell>
-                 <TableCell className="hidden lg:table-cell">{saving.notes}</TableCell>
-                 <TableCell className="text-right">{formatCurrency(saving.amount)}</TableCell>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Member</TableHead>
+                <TableHead>Scheme</TableHead>
+                <TableHead>Deposit Date</TableHead>
+                <TableHead>Notes</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+            </TableHeader>
+            <TableBody>
+              {savings.length === 0 ? (
+                <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center">
+                        No savings deposits found.
+                    </TableCell>
+                </TableRow>
+              ) : (
+                savings.map((saving) => (
+                  <TableRow key={saving.id}>
+                    <TableCell className="whitespace-nowrap">
+                      {saving.members ? (
+                         <Link href={`/members/${saving.members.id}`} className="hover:underline text-primary font-medium">
+                            {saving.members.name}
+                         </Link>
+                      ) : (
+                        <span className="text-muted-foreground">N/A</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">{saving.saving_schemes?.name}</TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {format(new Date(saving.deposit_date), "yyyy-MM-dd")}
+                    </TableCell>
+                     <TableCell className="whitespace-nowrap">{saving.notes}</TableCell>
+                     <TableCell className="text-right whitespace-nowrap">{formatCurrency(saving.amount)}</TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
     </div>
   )
 }
-
-    

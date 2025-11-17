@@ -1,3 +1,4 @@
+
 "use client"
 
 import {
@@ -22,44 +23,44 @@ type SavingScheme = {
 export function SavingSchemesTable({ schemes }: { schemes: SavingScheme[] }) {
   return (
     <div className="rounded-lg border shadow-sm overflow-hidden">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Scheme Name</TableHead>
-            <TableHead className="hidden sm:table-cell">Type</TableHead>
-            <TableHead>Interest Rate</TableHead>
-            <TableHead className="hidden md:table-cell">Lock-in Period</TableHead>
-            <TableHead>Status</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {!schemes || schemes.length === 0 ? (
-            <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
-                    No saving schemes found.
-                </TableCell>
-            </TableRow>
-          ) : (
-            schemes.map((scheme) => (
-              <TableRow key={scheme.id}>
-                <TableCell className="font-medium">{scheme.name}</TableCell>
-                <TableCell className="hidden sm:table-cell">
-                    <Badge variant={scheme.type === 'LTD' ? 'destructive' : scheme.type === 'Current' ? 'outline' : 'secondary'}>{scheme.type}</Badge>
-                </TableCell>
-                <TableCell>{scheme.interest_rate}%</TableCell>
-                <TableCell className="hidden md:table-cell">{scheme.lock_in_period_years ? `${scheme.lock_in_period_years} years` : 'N/A'}</TableCell>
-                 <TableCell>
-                    <Badge variant={scheme.is_active ? 'default' : 'outline'}>
-                        {scheme.is_active ? 'Active' : 'Inactive'}
-                    </Badge>
-                </TableCell>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Scheme Name</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Interest Rate</TableHead>
+                <TableHead>Lock-in Period</TableHead>
+                <TableHead>Status</TableHead>
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+            </TableHeader>
+            <TableBody>
+              {!schemes || schemes.length === 0 ? (
+                <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center">
+                        No saving schemes found.
+                    </TableCell>
+                </TableRow>
+              ) : (
+                schemes.map((scheme) => (
+                  <TableRow key={scheme.id}>
+                    <TableCell className="font-medium whitespace-nowrap">{scheme.name}</TableCell>
+                    <TableCell className="whitespace-nowrap">
+                        <Badge variant={scheme.type === 'LTD' ? 'destructive' : scheme.type === 'Current' ? 'outline' : 'secondary'}>{scheme.type}</Badge>
+                    </TableCell>
+                    <TableCell>{scheme.interest_rate}%</TableCell>
+                    <TableCell>{scheme.lock_in_period_years ? `${scheme.lock_in_period_years} years` : 'N/A'}</TableCell>
+                     <TableCell>
+                        <Badge variant={scheme.is_active ? 'default' : 'outline'}>
+                            {scheme.is_active ? 'Active' : 'Inactive'}
+                        </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
     </div>
   )
 }
-
-    

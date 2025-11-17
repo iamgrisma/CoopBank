@@ -65,50 +65,52 @@ export default async function JournalsPage() {
             </CardHeader>
             <CardContent>
                  <div className="rounded-lg border shadow-sm overflow-hidden">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Date</TableHead>
-                                <TableHead>Account</TableHead>
-                                <TableHead className="text-right">Debit</TableHead>
-                                <TableHead className="text-right">Credit</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {entries.length === 0 ? (
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader>
                                 <TableRow>
-                                    <TableCell colSpan={4} className="h-24 text-center">
-                                        No journal entries found.
-                                    </TableCell>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Account</TableHead>
+                                    <TableHead className="text-right">Debit</TableHead>
+                                    <TableHead className="text-right">Credit</TableHead>
                                 </TableRow>
-                            ) : (
-                                entries.map(entry => (
-                                    <>
-                                        <TableRow key={entry.id} className="bg-muted/50">
-                                            <TableCell className="font-semibold">
-                                                {format(new Date(entry.date), "do MMM, yyyy")}
-                                            </TableCell>
-                                            <TableCell colSpan={3} className="text-sm text-muted-foreground">
-                                                {entry.description}
-                                            </TableCell>
-                                        </TableRow>
-                                        {entry.journal_entry_items.map(item => (
-                                            <TableRow key={item.id}>
-                                                <TableCell></TableCell>
-                                                <TableCell className="pl-8">{item.chart_of_accounts?.name || 'N/A'}</TableCell>
-                                                <TableCell className="text-right font-mono">
-                                                    {item.type === 'debit' ? formatCurrency(item.amount) : ''}
+                            </TableHeader>
+                            <TableBody>
+                                {entries.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={4} className="h-24 text-center">
+                                            No journal entries found.
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    entries.map(entry => (
+                                        <>
+                                            <TableRow key={entry.id} className="bg-muted/50">
+                                                <TableCell className="font-semibold whitespace-nowrap">
+                                                    {format(new Date(entry.date), "do MMM, yyyy")}
                                                 </TableCell>
-                                                <TableCell className="text-right font-mono">
-                                                     {item.type === 'credit' ? formatCurrency(item.amount) : ''}
+                                                <TableCell colSpan={3} className="text-sm text-muted-foreground">
+                                                    {entry.description}
                                                 </TableCell>
                                             </TableRow>
-                                        ))}
-                                    </>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
+                                            {entry.journal_entry_items.map(item => (
+                                                <TableRow key={item.id}>
+                                                    <TableCell></TableCell>
+                                                    <TableCell className="pl-8 whitespace-nowrap">{item.chart_of_accounts?.name || 'N/A'}</TableCell>
+                                                    <TableCell className="text-right font-mono whitespace-nowrap">
+                                                        {item.type === 'debit' ? formatCurrency(item.amount) : ''}
+                                                    </TableCell>
+                                                    <TableCell className="text-right font-mono whitespace-nowrap">
+                                                         {item.type === 'credit' ? formatCurrency(item.amount) : ''}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </div>
             </CardContent>
         </Card>

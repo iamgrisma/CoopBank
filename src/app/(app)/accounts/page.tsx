@@ -168,58 +168,60 @@ async function getMemberAccounts(): Promise<MemberWithAccounts[]> {
 function AccountsTable({ members }: { members: MemberWithAccounts[] }) {
     return (
          <div className="rounded-lg border shadow-sm overflow-hidden">
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead>Member</TableHead>
-                        <TableHead className="hidden sm:table-cell">Account Number</TableHead>
-                        <TableHead>Account Type</TableHead>
-                        <TableHead className="hidden md:table-cell">Scheme</TableHead>
-                        <TableHead className="text-right">Balance</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                   {members.length === 0 ? (
+            <div className="overflow-x-auto">
+                <Table>
+                    <TableHeader>
                         <TableRow>
-                            <TableCell colSpan={5} className="h-24 text-center">
-                                No accounts found for this type.
-                            </TableCell>
+                            <TableHead>Member</TableHead>
+                            <TableHead>Account Number</TableHead>
+                            <TableHead>Account Type</TableHead>
+                            <TableHead>Scheme</TableHead>
+                            <TableHead className="text-right">Balance</TableHead>
                         </TableRow>
-                    ) : (
-                        members.map(member => (
-                            member.accounts.map((account, index) => (
-                                <TableRow key={`${member.id}-${account.scheme_name}-${account.type}`}>
-                                    {index === 0 ? (
-                                        <TableCell rowSpan={member.accounts.length} className="font-medium align-top py-4">
-                                            <div className="flex items-center gap-3">
-                                                <Avatar className="hidden h-9 w-9 sm:flex">
-                                                    {member.photo_url && <AvatarImage src={member.photo_url} alt={member.name} />}
-                                                    <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
-                                                </Avatar>
-                                                <Link href={`/members/${member.id}`} className="hover:underline text-primary font-medium leading-tight">
-                                                    {member.name}
-                                                </Link>
-                                            </div>
+                    </TableHeader>
+                    <TableBody>
+                       {members.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={5} className="h-24 text-center">
+                                    No accounts found for this type.
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                            members.map(member => (
+                                member.accounts.map((account, index) => (
+                                    <TableRow key={`${member.id}-${account.scheme_name}-${account.type}`}>
+                                        {index === 0 ? (
+                                            <TableCell rowSpan={member.accounts.length} className="font-medium align-top py-4 whitespace-nowrap">
+                                                <div className="flex items-center gap-3">
+                                                    <Avatar className="hidden h-9 w-9 sm:flex">
+                                                        {member.photo_url && <AvatarImage src={member.photo_url} alt={member.name} />}
+                                                        <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
+                                                    </Avatar>
+                                                    <Link href={`/members/${member.id}`} className="hover:underline text-primary font-medium leading-tight">
+                                                        {member.name}
+                                                    </Link>
+                                                </div>
+                                            </TableCell>
+                                        ) : null}
+                                        <TableCell className="whitespace-nowrap">{formatAccountNumber(account.account_number)}</TableCell>
+                                        <TableCell>
+                                             <Badge variant={
+                                                account.type === 'Loan' ? 'destructive' :
+                                                account.type === 'LTD' ? 'outline' : 
+                                                account.type === 'Current' ? 'default' : 'secondary'
+                                             }>
+                                                {account.type}
+                                            </Badge>
                                         </TableCell>
-                                    ) : null}
-                                    <TableCell className="hidden sm:table-cell">{formatAccountNumber(account.account_number)}</TableCell>
-                                    <TableCell>
-                                         <Badge variant={
-                                            account.type === 'Loan' ? 'destructive' :
-                                            account.type === 'LTD' ? 'outline' : 
-                                            account.type === 'Current' ? 'default' : 'secondary'
-                                         }>
-                                            {account.type}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="hidden md:table-cell">{account.scheme_name}</TableCell>
-                                    <TableCell className="text-right">{formatCurrency(account.balance)}</TableCell>
-                                </TableRow>
+                                        <TableCell className="whitespace-nowrap">{account.scheme_name}</TableCell>
+                                        <TableCell className="text-right whitespace-nowrap">{formatCurrency(account.balance)}</TableCell>
+                                    </TableRow>
+                                ))
                             ))
-                        ))
-                   )}
-                </TableBody>
-            </Table>
+                       )}
+                    </TableBody>
+                </Table>
+            </div>
         </div>
     )
 }
@@ -250,7 +252,7 @@ export default async function AccountsPage() {
         </div>
         
         <Tabs defaultValue="all">
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
                 <TabsTrigger value="all">All Accounts</TabsTrigger>
                 <TabsTrigger value="saving">Savings</TabsTrigger>
                 <TabsTrigger value="current">Current</TabsTrigger>

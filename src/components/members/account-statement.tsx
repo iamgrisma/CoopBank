@@ -61,50 +61,52 @@ export function AccountStatement({ transactions }: { transactions: Transaction[]
 
   return (
     <div className="rounded-lg border shadow-sm overflow-hidden">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Date</TableHead>
-            <TableHead>Description</TableHead>
-            <TableHead className="text-right">Debit</TableHead>
-            <TableHead className="text-right">Credit</TableHead>
-            <TableHead className="text-right">Balance</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {transactions.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={5} className="h-24 text-center">
-                No transactions found for this member.
-              </TableCell>
-            </TableRow>
-          ) : (
-            <>
-              <TableRow className="bg-muted/50 font-semibold">
-                <TableCell colSpan={4}>Opening Balance</TableCell>
-                <TableCell className="text-right">{formatCurrency(0)}</TableCell>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead className="text-right">Debit</TableHead>
+                <TableHead className="text-right">Credit</TableHead>
+                <TableHead className="text-right">Balance</TableHead>
               </TableRow>
-              {processedTransactions.map((t) => (
-                <TableRow key={t.id}>
-                  <TableCell>{format(new Date(t.date), "dd-MMM-yy")}</TableCell>
-                  <TableCell>{t.description || t.type}</TableCell>
-                  <TableCell className="text-right font-mono text-red-600">
-                    {t.debit > 0 ? formatCurrency(t.debit) : ""}
+            </TableHeader>
+            <TableBody>
+              {transactions.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-24 text-center">
+                    No transactions found for this member.
                   </TableCell>
-                  <TableCell className="text-right font-mono text-green-600">
-                    {t.credit > 0 ? formatCurrency(t.credit) : ""}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">{formatCurrency(t.balance)}</TableCell>
                 </TableRow>
-              ))}
-               <TableRow className="bg-muted/50 font-semibold">
-                <TableCell colSpan={4}>Closing Balance</TableCell>
-                <TableCell className="text-right">{formatCurrency(runningBalance)}</TableCell>
-              </TableRow>
-            </>
-          )}
-        </TableBody>
-      </Table>
+              ) : (
+                <>
+                  <TableRow className="bg-muted/50 font-semibold">
+                    <TableCell colSpan={4}>Opening Balance</TableCell>
+                    <TableCell className="text-right">{formatCurrency(0)}</TableCell>
+                  </TableRow>
+                  {processedTransactions.map((t) => (
+                    <TableRow key={t.id}>
+                      <TableCell className="whitespace-nowrap">{format(new Date(t.date), "dd-MMM-yy")}</TableCell>
+                      <TableCell>{t.description || t.type}</TableCell>
+                      <TableCell className="text-right font-mono text-red-600 whitespace-nowrap">
+                        {t.debit > 0 ? formatCurrency(t.debit) : ""}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-green-600 whitespace-nowrap">
+                        {t.credit > 0 ? formatCurrency(t.credit) : ""}
+                      </TableCell>
+                      <TableCell className="text-right font-mono whitespace-nowrap">{formatCurrency(t.balance)}</TableCell>
+                    </TableRow>
+                  ))}
+                   <TableRow className="bg-muted/50 font-semibold">
+                    <TableCell colSpan={4}>Closing Balance</TableCell>
+                    <TableCell className="text-right">{formatCurrency(runningBalance)}</TableCell>
+                  </TableRow>
+                </>
+              )}
+            </TableBody>
+          </Table>
+        </div>
     </div>
   );
 }

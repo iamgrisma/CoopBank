@@ -1,3 +1,4 @@
+
 "use client"
 
 import {
@@ -24,40 +25,42 @@ type LoanScheme = {
 export function LoanSchemesTable({ schemes }: { schemes: LoanScheme[] }) {
   return (
     <div className="rounded-lg border shadow-sm overflow-hidden">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Scheme Name</TableHead>
-            <TableHead className="hidden sm:table-cell">Interest Rate</TableHead>
-            <TableHead className="hidden md:table-cell">Term (Months)</TableHead>
-            <TableHead className="hidden sm:table-cell">Repayment</TableHead>
-            <TableHead>Status</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {schemes.length === 0 ? (
-            <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
-                    No loan schemes found.
-                </TableCell>
-            </TableRow>
-          ) : (
-            schemes.map((scheme) => (
-              <TableRow key={scheme.id}>
-                <TableCell className="font-medium">{scheme.name}</TableCell>
-                <TableCell className="hidden sm:table-cell">{scheme.default_interest_rate}%</TableCell>
-                <TableCell className="hidden md:table-cell">{scheme.min_term_months} - {scheme.max_term_months}</TableCell>
-                <TableCell className="hidden sm:table-cell">{scheme.repayment_frequency}</TableCell>
-                 <TableCell>
-                    <Badge variant={scheme.is_active ? 'default' : 'secondary'}>
-                        {scheme.is_active ? 'Active' : 'Inactive'}
-                    </Badge>
-                </TableCell>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Scheme Name</TableHead>
+                <TableHead>Interest Rate</TableHead>
+                <TableHead>Term (Months)</TableHead>
+                <TableHead>Repayment</TableHead>
+                <TableHead>Status</TableHead>
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+            </TableHeader>
+            <TableBody>
+              {schemes.length === 0 ? (
+                <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center">
+                        No loan schemes found.
+                    </TableCell>
+                </TableRow>
+              ) : (
+                schemes.map((scheme) => (
+                  <TableRow key={scheme.id}>
+                    <TableCell className="font-medium whitespace-nowrap">{scheme.name}</TableCell>
+                    <TableCell>{scheme.default_interest_rate}%</TableCell>
+                    <TableCell>{scheme.min_term_months} - {scheme.max_term_months}</TableCell>
+                    <TableCell>{scheme.repayment_frequency}</TableCell>
+                     <TableCell>
+                        <Badge variant={scheme.is_active ? 'default' : 'secondary'}>
+                            {scheme.is_active ? 'Active' : 'Inactive'}
+                        </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+      </div>
     </div>
   )
 }

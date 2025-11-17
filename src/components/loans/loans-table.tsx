@@ -75,56 +75,58 @@ const getStatusBadgeVariant = (status: string): "default" | "secondary" | "destr
 export function LoansTable({ loans, allLoanSchemes }: { loans: Loan[], allLoanSchemes: LoanScheme[] }) {
   return (
     <div className="rounded-lg border shadow-sm overflow-hidden">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Member</TableHead>
-            <TableHead className="hidden sm:table-cell">Scheme</TableHead>
-            <TableHead className="hidden md:table-cell">Disbursed</TableHead>
-            <TableHead className="hidden lg:table-cell">Term</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Amount</TableHead>
-            <TableHead><span className="sr-only">Actions</span></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {loans.length === 0 ? (
-            <TableRow>
-                <TableCell colSpan={8} className="h-24 text-center">
-                    No loans found.
-                </TableCell>
-            </TableRow>
-          ) : (
-            loans.map((loan) => (
-              <TableRow key={loan.id}>
-                <TableCell>
-                  {loan.members ? (
-                     <Link href={`/members/${loan.members.id}`} className="hover:underline text-primary font-medium">
-                        {loan.members.name}
-                     </Link>
-                  ) : (
-                    <span className="text-muted-foreground">N/A</span>
-                  )}
-                </TableCell>
-                <TableCell className="hidden sm:table-cell">{loan.loan_schemes?.name}</TableCell>
-                <TableCell className="hidden md:table-cell">
-                  {format(new Date(loan.disbursement_date), "yyyy-MM-dd")}
-                </TableCell>
-                 <TableCell className="hidden lg:table-cell">{loan.loan_term_months} months</TableCell>
-                 <TableCell>
-                    <Badge variant={getStatusBadgeVariant(loan.status)}>
-                        {loan.status}
-                    </Badge>
-                </TableCell>
-                 <TableCell className="text-right">{formatCurrency(loan.amount)}</TableCell>
-                 <TableCell className="text-right">
-                    <LoanDetailsDialog loan={loan} allLoanSchemes={allLoanSchemes} />
-                 </TableCell>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Member</TableHead>
+                <TableHead>Scheme</TableHead>
+                <TableHead>Disbursed</TableHead>
+                <TableHead>Term</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
+                <TableHead><span className="sr-only">Actions</span></TableHead>
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+            </TableHeader>
+            <TableBody>
+              {loans.length === 0 ? (
+                <TableRow>
+                    <TableCell colSpan={8} className="h-24 text-center">
+                        No loans found.
+                    </TableCell>
+                </TableRow>
+              ) : (
+                loans.map((loan) => (
+                  <TableRow key={loan.id}>
+                    <TableCell className="whitespace-nowrap">
+                      {loan.members ? (
+                         <Link href={`/members/${loan.members.id}`} className="hover:underline text-primary font-medium">
+                            {loan.members.name}
+                         </Link>
+                      ) : (
+                        <span className="text-muted-foreground">N/A</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">{loan.loan_schemes?.name}</TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {format(new Date(loan.disbursement_date), "yyyy-MM-dd")}
+                    </TableCell>
+                     <TableCell className="whitespace-nowrap">{loan.loan_term_months} months</TableCell>
+                     <TableCell>
+                        <Badge variant={getStatusBadgeVariant(loan.status)}>
+                            {loan.status}
+                        </Badge>
+                    </TableCell>
+                     <TableCell className="text-right whitespace-nowrap">{formatCurrency(loan.amount)}</TableCell>
+                     <TableCell className="text-right">
+                        <LoanDetailsDialog loan={loan} allLoanSchemes={allLoanSchemes} />
+                     </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
     </div>
   )
 }

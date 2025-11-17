@@ -86,26 +86,28 @@ export default async function ChartOfAccountsPage() {
                              <div key={type}>
                                 <h2 className="text-xl font-semibold mb-2">{type}s</h2>
                                 <div className="rounded-lg border shadow-sm overflow-hidden">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead className="w-[100px]">Code</TableHead>
-                                                <TableHead>Name</TableHead>
-                                                <TableHead className="hidden sm:table-cell">Type</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {accountsByType[type].map(account => (
-                                                <TableRow key={account.code}>
-                                                    <TableCell>{account.code}</TableCell>
-                                                    <TableCell className="font-medium">{account.name}</TableCell>
-                                                    <TableCell className="hidden sm:table-cell">
-                                                        <Badge variant={getBadgeVariant(account.type)}>{account.type}</Badge>
-                                                    </TableCell>
+                                    <div className="overflow-x-auto">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead className="w-[100px]">Code</TableHead>
+                                                    <TableHead>Name</TableHead>
+                                                    <TableHead>Type</TableHead>
                                                 </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {accountsByType[type].map(account => (
+                                                    <TableRow key={account.code}>
+                                                        <TableCell>{account.code}</TableCell>
+                                                        <TableCell className="font-medium">{account.name}</TableCell>
+                                                        <TableCell>
+                                                            <Badge variant={getBadgeVariant(account.type)}>{account.type}</Badge>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
                                 </div>
                             </div>
                         )

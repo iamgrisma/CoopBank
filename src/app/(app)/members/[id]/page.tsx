@@ -165,11 +165,11 @@ const formatAccountNumber = (accountNumber: string | null) => {
 
 function ProfileInfoItem({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: string | React.ReactNode }) {
     return (
-        <div className="flex items-center gap-3">
-            <Icon className="h-5 w-5 text-muted-foreground" />
+        <div className="flex items-start gap-3">
+            <Icon className="h-5 w-5 text-muted-foreground mt-0.5" />
             <div>
                 <p className="text-sm text-muted-foreground">{label}</p>
-                <p className="font-medium break-all">{value}</p>
+                <p className="font-medium break-words">{value}</p>
             </div>
         </div>
     )
@@ -261,48 +261,50 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         <Card className="w-full">
             <CardContent className="p-6 flex flex-col md:flex-row items-start gap-6">
-                <Avatar className="h-28 w-28 border-4 border-background">
+                <Avatar className="h-28 w-28 border-4 border-background shrink-0">
                     {member.photo_url && <AvatarImage src={member.photo_url} alt={member.name || 'member photo'} />}
                     <AvatarFallback className="text-4xl">{getInitials(member.name)}</AvatarFallback>
                 </Avatar>
                 <div className="flex-grow">
                     <h1 className="text-3xl font-bold font-headline">{member.name}</h1>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
                         <span>A/C: <span className="font-mono">{formatAccountNumber(member.account_number)}</span></span>
-                        <span>|</span>
-                        <span>Joined on {format(new Date(member.join_date), "do MMMM, yyyy")}</span>
+                        <span className="hidden sm:inline">|</span>
+                        <span>Joined: {format(new Date(member.join_date), "do MMM, yyyy")}</span>
                     </div>
-                     <div className="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
+                     <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
                         <ProfileInfoItem icon={AtSign} label="Email" value={member.email || 'N/A'} />
                         <ProfileInfoItem icon={Phone} label="Phone" value={member.phone || 'N/A'} />
                         <ProfileInfoItem icon={MapPin} label="Address" value={member.address || 'N/A'} />
                         <ProfileInfoItem 
                             icon={Cake} 
                             label="Date of Birth" 
-                            value={member.dob ? `${format(new Date(member.dob), "do MMMM, yyyy")} (${differenceInYears(new Date(), new Date(member.dob))} years)` : 'N/A'} 
+                            value={member.dob ? `${format(new Date(member.dob), "do MMM, yyyy")} (${differenceInYears(new Date(), new Date(member.dob))} years)` : 'N/A'} 
                         />
                      </div>
                 </div>
             </CardContent>
         </Card>
 
-      <div className="grid gap-6 md:grid-cols-3">
-        <div className="md:col-span-3">
-            <Tabs defaultValue="loans">
-                <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5">
-                    <TabsTrigger value="loans">Loans</TabsTrigger>
-                    <TabsTrigger value="savings">Savings</TabsTrigger>
-                    <TabsTrigger value="shares">Shares</TabsTrigger>
-                    <TabsTrigger value="statement">Statement</TabsTrigger>
-                    <TabsTrigger value="kyc" className="hidden sm:inline-flex">KYC</TabsTrigger>
-                </TabsList>
+      <div className="grid gap-6 md:grid-cols-1">
+        <div>
+            <Tabs defaultValue="loans" className="w-full">
+                <div className="overflow-x-auto">
+                    <TabsList>
+                        <TabsTrigger value="loans">Loans</TabsTrigger>
+                        <TabsTrigger value="savings">Savings</TabsTrigger>
+                        <TabsTrigger value="shares">Shares</TabsTrigger>
+                        <TabsTrigger value="statement">Statement</TabsTrigger>
+                        <TabsTrigger value="kyc">KYC</TabsTrigger>
+                    </TabsList>
+                </div>
                 <TabsContent value="shares">
                     <Card>
-                        <CardHeader className="flex flex-row items-center">
-                            <div className="grid gap-2">
+                        <CardHeader className="flex flex-row flex-wrap items-center">
+                            <div className="grid gap-2 flex-grow">
                                 <CardTitle>Share Holdings</CardTitle>
                             </div>
-                            <div className="ml-auto flex items-center gap-2">
+                            <div className="ml-auto flex items-center gap-2 mt-2 sm:mt-0">
                                 <AddShare
                                   triggerButton={<Button size="sm"><PlusCircle className="mr-0 sm:mr-2 h-4 w-4" /><span className="hidden sm:inline">Add Share</span></Button>}
                                   defaultMember={{ id: member.id, name: member.name || '' }}
@@ -310,42 +312,44 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <div className="mb-4 grid grid-cols-2 gap-4">
+                            <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <StatCard title="Total Shares" value={totalSharesCount.toString()} icon={Briefcase} />
                                 <StatCard title="Total Value" value={formatCurrency(totalSharesValue)} icon={Wallet} />
                             </div>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Cert. No</TableHead>
-                                        <TableHead className="hidden sm:table-cell">No. of Shares</TableHead>
-                                        <TableHead className="hidden md:table-cell">Face Value</TableHead>
-                                        <TableHead>Purchase Date</TableHead>
-                                        <TableHead className="text-right">Total</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {shares.map(share => (
-                                        <TableRow key={share.id}>
-                                            <TableCell>{share.certificate_number}</TableCell>
-                                            <TableCell className="hidden sm:table-cell">{share.number_of_shares}</TableCell>
-                                            <TableCell className="hidden md:table-cell">{formatCurrency(share.face_value)}</TableCell>
-                                            <TableCell>{format(new Date(share.purchase_date), "do MMM, yy")}</TableCell>
-                                            <TableCell className="text-right">{formatCurrency(share.number_of_shares * share.face_value)}</TableCell>
+                            <div className="overflow-x-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Cert. No</TableHead>
+                                            <TableHead>No. of Shares</TableHead>
+                                            <TableHead>Face Value</TableHead>
+                                            <TableHead>Purchase Date</TableHead>
+                                            <TableHead className="text-right">Total</TableHead>
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {shares.map(share => (
+                                            <TableRow key={share.id}>
+                                                <TableCell>{share.certificate_number}</TableCell>
+                                                <TableCell>{share.number_of_shares}</TableCell>
+                                                <TableCell>{formatCurrency(share.face_value)}</TableCell>
+                                                <TableCell>{format(new Date(share.purchase_date), "do MMM, yy")}</TableCell>
+                                                <TableCell className="text-right">{formatCurrency(share.number_of_shares * share.face_value)}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
                         </CardContent>
                     </Card>
                 </TabsContent>
                 <TabsContent value="savings">
                     <Card>
-                        <CardHeader className="flex flex-row items-center">
-                            <div className="grid gap-2">
+                        <CardHeader className="flex flex-row flex-wrap items-center">
+                            <div className="grid gap-2 flex-grow">
                                 <CardTitle>Savings Accounts</CardTitle>
                             </div>
-                            <div className="ml-auto flex items-center gap-2">
+                            <div className="ml-auto flex items-center gap-2 mt-2 sm:mt-0">
                                 <AddSaving
                                   savingSchemes={savingSchemes}
                                   triggerButton={<Button size="sm"><PlusCircle className="mr-0 sm:mr-2 h-4 w-4" /><span className="hidden sm:inline">Add Deposit</span></Button>}
@@ -372,24 +376,26 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                                     <AccordionItem value={schemeName} key={schemeName}>
                                         <AccordionTrigger className="text-lg font-semibold">{schemeName}</AccordionTrigger>
                                         <AccordionContent>
-                                            <Table>
-                                                <TableHeader>
-                                                    <TableRow>
-                                                        <TableHead>Deposit Date</TableHead>
-                                                        <TableHead className="hidden sm:table-cell">Notes</TableHead>
-                                                        <TableHead className="text-right">Amount</TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {schemeData.deposits.map(saving => (
-                                                        <TableRow key={saving.id}>
-                                                            <TableCell>{format(new Date(saving.deposit_date), "do MMM, yy")}</TableCell>
-                                                            <TableCell className="hidden sm:table-cell">{saving.notes}</TableCell>
-                                                            <TableCell className="text-right">{formatCurrency(saving.amount)}</TableCell>
+                                            <div className="overflow-x-auto">
+                                                <Table>
+                                                    <TableHeader>
+                                                        <TableRow>
+                                                            <TableHead>Deposit Date</TableHead>
+                                                            <TableHead>Notes</TableHead>
+                                                            <TableHead className="text-right">Amount</TableHead>
                                                         </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        {schemeData.deposits.map(saving => (
+                                                            <TableRow key={saving.id}>
+                                                                <TableCell>{format(new Date(saving.deposit_date), "do MMM, yy")}</TableCell>
+                                                                <TableCell>{saving.notes}</TableCell>
+                                                                <TableCell className="text-right">{formatCurrency(saving.amount)}</TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                    </TableBody>
+                                                </Table>
+                                            </div>
                                         </AccordionContent>
                                     </AccordionItem>
                                 ))}
@@ -399,11 +405,11 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                 </TabsContent>
                 <TabsContent value="loans">
                     <Card>
-                        <CardHeader className="flex flex-row items-center">
-                            <div className="grid gap-2">
+                        <CardHeader className="flex flex-row flex-wrap items-center">
+                            <div className="grid gap-2 flex-grow">
                                 <CardTitle>Loan Accounts</CardTitle>
                             </div>
-                            <div className="ml-auto flex items-center gap-2">
+                            <div className="ml-auto flex items-center gap-2 mt-2 sm:mt-0">
                                  <AddLoan
                                     loanSchemes={loanSchemes}
                                     defaultMember={{ id: member.id, name: member.name || '' }}
@@ -412,7 +418,7 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <div className="mb-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                 <StatCard title="Total Loaned" value={formatCurrency(totalLoanAmount)} icon={HandCoins} />
                                 <StatCard title="Total Repaid" value={formatCurrency(totalRepaidAmount)} icon={Wallet} />
                                 <StatCard title="Remaining Principal" value={formatCurrency(remainingPrincipal)} icon={Scale} />
@@ -426,32 +432,34 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                                     </CardContent>
                                 </Card>
                             </div>
-                           <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Scheme</TableHead>
-                                        <TableHead className="hidden sm:table-cell">Disbursed</TableHead>
-                                        <TableHead className="hidden md:table-cell">Term</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead className="text-right">Amount</TableHead>
-                                        <TableHead><span className="sr-only">Actions</span></TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {loans.map(loan => (
-                                        <TableRow key={loan.id}>
-                                            <TableCell>{loan.loan_schemes?.name}</TableCell>
-                                            <TableCell className="hidden sm:table-cell">{format(new Date(loan.disbursement_date), "do MMM, yy")}</TableCell>
-                                            <TableCell className="hidden md:table-cell">{loan.loan_term_months} months</TableCell>
-                                            <TableCell><Badge variant="outline">{loan.status}</Badge></TableCell>
-                                            <TableCell className="text-right">{formatCurrency(loan.amount)}</TableCell>
-                                            <TableCell className="text-right">
-                                                <LoanDetailsDialog loan={{...loan, members: {id: member.id, name: member.name!}}} allLoanSchemes={loanSchemes} />
-                                            </TableCell>
+                            <div className="overflow-x-auto">
+                               <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Scheme</TableHead>
+                                            <TableHead>Disbursed</TableHead>
+                                            <TableHead>Term</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead className="text-right">Amount</TableHead>
+                                            <TableHead><span className="sr-only">Actions</span></TableHead>
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {loans.map(loan => (
+                                            <TableRow key={loan.id}>
+                                                <TableCell>{loan.loan_schemes?.name}</TableCell>
+                                                <TableCell>{format(new Date(loan.disbursement_date), "do MMM, yy")}</TableCell>
+                                                <TableCell>{loan.loan_term_months} months</TableCell>
+                                                <TableCell><Badge variant="outline">{loan.status}</Badge></TableCell>
+                                                <TableCell className="text-right">{formatCurrency(loan.amount)}</TableCell>
+                                                <TableCell className="text-right">
+                                                    <LoanDetailsDialog loan={{...loan, members: {id: member.id, name: member.name!}}} allLoanSchemes={loanSchemes} />
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
                         </CardContent>
                     </Card>
                 </TabsContent>
@@ -523,5 +531,3 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
     </main>
   );
 }
-
-    
