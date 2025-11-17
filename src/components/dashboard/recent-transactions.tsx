@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { format } from "date-fns"
+import { formatCurrency } from "@/lib/utils"
 
 // Define a type for the transaction for better type-safety
 type Transaction = {
@@ -27,14 +28,6 @@ type Transaction = {
 };
 
 export function RecentTransactions({ transactions }: { transactions: Transaction[] }) {
-  
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'NPR',
-      minimumFractionDigits: 2,
-    }).format(amount).replace('NPR', 'रु');
-  }
 
   return (
     <Card>

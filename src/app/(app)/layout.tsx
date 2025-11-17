@@ -13,6 +13,8 @@ import {
   Wallet,
   ChevronDown,
   WalletCards,
+  BookUser,
+  BookText,
 } from "lucide-react";
 
 import { Header } from "@/components/header";
@@ -38,6 +40,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLoansActive = pathname.startsWith('/loans');
   const isSavingsActive = pathname.startsWith('/savings');
+  const isAccountingActive = pathname.startsWith('/accounting');
 
   return (
     <SidebarProvider>
@@ -132,14 +135,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <SidebarGroup>
             <SidebarGroupLabel>Finance</SidebarGroupLabel>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Accounting">
-                  <Link href="#">
-                    <BookOpenCheck />
-                    <span>Accounting</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+                <SidebarMenuItem>
+                    <Collapsible>
+                    <CollapsibleTrigger asChild>
+                        <SidebarMenuButton tooltip="Accounting" isActive={isAccountingActive} className="justify-between w-full">
+                            <div className="flex items-center gap-2">
+                                <BookOpenCheck />
+                                <span>Accounting</span>
+                            </div>
+                            <ChevronDown className={cn("h-4 w-4 transition-transform", "group-data-[collapsible=icon]:hidden")} />
+                        </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                        <div className="group-data-[collapsible=icon]:hidden pl-8 py-2 flex flex-col gap-2">
+                        <Link href="/accounting/journals" className={cn("text-sm hover:text-primary", pathname === "/accounting/journals" && "text-primary font-semibold")}>Journals</Link>
+                        <Link href="/accounting/chart-of-accounts" className={cn("text-sm hover:text-primary", pathname === "/accounting/chart-of-accounts" && "text-primary font-semibold")}>Chart of Accounts</Link>
+                        </div>
+                    </CollapsibleContent>
+                    </Collapsible>
+                </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Reports">
                   <Link href="/reports">
@@ -183,4 +197,3 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     </SidebarProvider>
   );
 }
-
