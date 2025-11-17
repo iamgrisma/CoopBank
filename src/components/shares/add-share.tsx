@@ -56,6 +56,31 @@ const shareFormSchema = z.object({
 
 type ShareFormValues = z.infer<typeof shareFormSchema>;
 
+async function getNextCertificateNumber() {
+    const { data, error } = await supabase
+        .from('shares')
+        .select('certificate_number')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+    
+    if (error || !data) {
+        return 'SH-101'; // Default if no shares exist
+    }
+
+    const lastCert = data.certificate_number;
+    const matches = lastCert.match(/(\d+)$/);
+    if (matches) {
+        const lastNum = parseInt(matches[0], 10);
+        const nextNum = lastNum + 1;
+        const prefix = lastCert.substring(0, lastCert.length - matches[0].length);
+        return `${prefix}${nextNum}`;
+    }
+
+    return 'SH-101'; // Default if parsing fails
+}
+
+
 async function addShareToDb(share: Omit<ShareFormValues, 'purchase_date'> & { purchase_date: string, member_name: string }) {
   // 1. Add the share record
   const { data: shareData, error: shareError } = await supabase
@@ -122,17 +147,21 @@ export function AddShare({ members, defaultMember, triggerButton }: AddShareProp
     },
   });
 
-  // Reset form when the dialog opens, especially for default member
+  // Reset form when the dialog opens
   React.useEffect(() => {
-    if (open) {
-      form.reset({
-        member_id: defaultMember?.id,
-        certificate_number: "",
-        number_of_shares: 1,
-        face_value: 100,
-        purchase_date: new Date(),
-      });
+    async function setupForm() {
+        if (open) {
+            const nextCertNumber = await getNextCertificateNumber();
+            form.reset({
+                member_id: defaultMember?.id || "",
+                certificate_number: nextCertNumber,
+                number_of_shares: 1,
+                face_value: 100,
+                purchase_date: new Date(),
+            });
+        }
     }
+    setupForm();
   }, [open, defaultMember, form]);
 
   const onSubmit = async (values: ShareFormValues) => {
