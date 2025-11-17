@@ -1,8 +1,10 @@
+
 import { AddSaving } from "@/components/savings/add-saving";
 import { SavingsTable } from "@/components/savings/savings-table";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { MinusCircle, PlusCircle } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { AddWithdrawal } from "@/components/savings/withdrawals/add-withdrawal";
 
 async function getSavings() {
   const supabase = createSupabaseServerClient();
@@ -65,7 +67,16 @@ export default async function SavingsPage() {
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
       <div className="flex items-center">
         <h1 className="font-semibold text-lg md:text-2xl">All Saving Deposits</h1>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+          <AddWithdrawal 
+            members={members}
+            triggerButton={
+              <Button variant="outline">
+                <MinusCircle className="mr-2 h-4 w-4" />
+                Withdraw
+              </Button>
+            }
+          />
           <AddSaving 
             members={members}
             savingSchemes={savingSchemes}
