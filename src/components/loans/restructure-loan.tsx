@@ -85,15 +85,33 @@ async function restructureLoanInDb(
         repayment_frequency: string;
     }
 ) {
-    // 1. Update the old loan status to 'Restructured'
+    const totalSettlementAmount = newLoanData.amount;
+
+    // 1. Create a "settlement" repayment to close the old loan
+    const { error: repaymentError } = await supabase
+        .from('loan_repayments')
+        .insert({
+            loan_id: originalLoanId,
+            amount_paid: totalSettlementAmount,
+            payment_date: newLoanData.disbursement_date,
+            notes: `Settled by Restructuring. New Loan ID will be created.`,
+            principal_paid: outstandingPrincipal,
+            interest_paid: accruedInterest,
+            penal_interest_paid: 0,
+            penalty_paid: 0,
+        });
+
+    if (repaymentError) throw new Error(`Failed to create settlement repayment: ${repaymentError.message}`);
+
+    // 2. Update the old loan status to 'Restructured'
     const { error: updateError } = await supabase
         .from('loans')
         .update({ status: 'Restructured' })
         .eq('id', originalLoanId);
 
-    if (updateError) throw new Error(`Failed to update original loan: ${updateError.message}`);
+    if (updateError) throw new Error(`Failed to update original loan status: ${updateError.message}`);
     
-    // 2. Create the new loan record with the capitalized amount
+    // 3. Create the new loan record with the capitalized amount
     const { data: newLoan, error: newLoanError } = await supabase
         .from('loans')
         .insert({
@@ -109,10 +127,9 @@ async function restructureLoanInDb(
             grace_period_months: newLoanData.grace_period_months,
         }).select().single();
     
-    if (newLoanError) throw new Error(`Failed to create new loan: ${newLoanError.message}`);
+    if (newLoanError || !newLoan) throw new Error(`Failed to create new loan: ${newLoanError?.message || 'No data returned'}`);
 
-    // 3. Create transactions to balance the books
-    const totalSettlementAmount = outstandingPrincipal + accruedInterest;
+    // 4. Create accounting transactions to balance the books
     const transactions = [
         // A non-cash transaction to "pay off" the old loan's principal and accrued interest
         {
@@ -122,7 +139,7 @@ async function restructureLoanInDb(
             amount: totalSettlementAmount,
             date: newLoanData.disbursement_date,
             status: 'Completed',
-            description: `Settlement of loan ${originalLoanId} for restructuring.`
+            description: `Settlement of loan ${originalLoanId} for restructuring. Principal: ${formatCurrency(outstandingPrincipal)}, Interest: ${formatCurrency(accruedInterest)}.`
         },
         // Debit transaction for the new loan disbursement (same capitalized amount)
         {
@@ -132,7 +149,7 @@ async function restructureLoanInDb(
             amount: newLoanData.amount,
             date: newLoanData.disbursement_date,
             status: 'Completed',
-            description: `New loan from restructuring. Principal: ${formatCurrency(outstandingPrincipal)}, Capitalized Interest: ${formatCurrency(accruedInterest)}`
+            description: `New loan (ID: ${newLoan.id}) from restructuring.`
         }
     ];
 
@@ -213,23 +230,17 @@ export function RestructureLoanDialog({
     setIsSubmitting(true);
     try {
         const selectedScheme = allLoanSchemes.find(s => s.id === values.loan_scheme_id);
-        if (!selectedScheme && values.loan_scheme_id) { // User selected a scheme but it's not found
-             throw new Error("Selected scheme not found.");
+        if (!selectedScheme) {
+             throw new Error("A valid new loan scheme must be selected for restructuring.");
         }
-
-        // If no new scheme is selected, we need to find the original scheme to get its properties
-        // This is a simplification; a real app would fetch the original loan's full scheme data.
-        // For now, we assume the client has enough info if no new scheme is chosen.
 
         const newLoanData = {
             ...values,
             member_id: originalLoan.members!.id,
             member_name: originalLoan.members?.name || 'N/A',
             disbursement_date: values.disbursement_date.toISOString().split('T')[0],
-            // Use new scheme's properties if available, otherwise this logic needs original scheme data.
-            // Simplified for now: Assume Monthly/0 if no new scheme is chosen.
-            repayment_frequency: selectedScheme?.repayment_frequency || 'Monthly',
-            grace_period_months: selectedScheme?.repayment_frequency === 'Monthly' ? (selectedScheme.grace_period_months || 0) : 0,
+            repayment_frequency: selectedScheme.repayment_frequency,
+            grace_period_months: selectedScheme.repayment_frequency === 'Monthly' ? (selectedScheme.grace_period_months || 0) : 0,
         };
 
         await restructureLoanInDb(originalLoan.id, outstandingPrincipal, accruedInterest, newLoanData);
@@ -303,11 +314,11 @@ export function RestructureLoanDialog({
               name="loan_scheme_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>New Loan Scheme (Optional)</FormLabel>
+                  <FormLabel>New Loan Scheme</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Keep existing terms or select new" />
+                        <SelectValue placeholder="Select a new loan scheme" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -318,7 +329,7 @@ export function RestructureLoanDialog({
                       ))}
                     </SelectContent>
                   </Select>
-                   <FormDescription>Leave blank to keep similar terms to the original loan.</FormDescription>
+                   <FormDescription>Select the new scheme to port the loan to.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
