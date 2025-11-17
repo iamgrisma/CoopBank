@@ -153,6 +153,33 @@ async function addRepaymentToDb(repayment: Omit<RepaymentFormValues, 'payment_da
     if (transactionError) console.error(`Failed to create savings transaction: ${transactionError.message}`);
   }
 
+  // 4. Check if the loan is now paid off
+  const { data: loan, error: loanFetchError } = await supabase
+    .from('loans')
+    .select('amount')
+    .eq('id', commonDetails.loan_id)
+    .single();
+
+  const { data: allRepayments, error: repaymentsFetchError } = await supabase
+    .from('loan_repayments')
+    .select('principal_paid')
+    .eq('loan_id', commonDetails.loan_id);
+    
+  if (loan && allRepayments) {
+      const totalPrincipalPaid = allRepayments.reduce((sum, p) => sum + p.principal_paid, 0);
+      if (totalPrincipalPaid >= loan.amount) {
+          const { error: updateError } = await supabase
+            .from('loans')
+            .update({ status: 'Paid Off' })
+            .eq('id', commonDetails.loan_id);
+
+          if (updateError) {
+              console.error(`Loan paid off, but failed to update status: ${updateError.message}`);
+          }
+      }
+  }
+
+
   return repaymentData;
 }
 
