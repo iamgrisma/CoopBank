@@ -17,9 +17,9 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { LoanDetailsDialog } from "@/components/loans/loan-details-dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { calculateAccruedInterestForAllSavings } from "@/lib/saving-utils";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-async function getMember(id: string) {
-  const supabase = createSupabaseServerClient();
+async function getMember(supabase: SupabaseClient, id: string) {
   const { data: member, error } = await supabase
     .from("members")
     .select("*, district:districts(name), province:provinces(name), local_level:local_levels(name)")
@@ -33,8 +33,7 @@ async function getMember(id: string) {
   return member;
 }
 
-async function getShares(memberId: string) {
-    const supabase = createSupabaseServerClient();
+async function getShares(supabase: SupabaseClient, memberId: string) {
     const { data: shares, error } = await supabase
         .from('shares')
         .select('*')
@@ -49,8 +48,7 @@ async function getShares(memberId: string) {
     return shares;
 }
 
-async function getSavings(memberId: string) {
-    const supabase = createSupabaseServerClient();
+async function getSavings(supabase: SupabaseClient, memberId: string) {
     const { data: savings, error } = await supabase
         .from('savings')
         .select(`
@@ -72,8 +70,7 @@ async function getSavings(memberId: string) {
     return savings;
 }
 
-async function getLoans(memberId: string) {
-  const supabase = createSupabaseServerClient();
+async function getLoans(supabase: SupabaseClient, memberId: string) {
   const { data, error } = await supabase
     .from('loans')
     .select(`
@@ -91,8 +88,7 @@ async function getLoans(memberId: string) {
   return data;
 }
 
-async function getLoanSchemes() {
-    const supabase = createSupabaseServerClient();
+async function getLoanSchemes(supabase: SupabaseClient) {
     const { data, error } = await supabase
         .from('loan_schemes')
         .select('*')
@@ -105,8 +101,7 @@ async function getLoanSchemes() {
     return data;
 }
 
-async function getSavingSchemes() {
-    const supabase = createSupabaseServerClient();
+async function getSavingSchemes(supabase: SupabaseClient) {
     const { data, error } = await supabase
         .from('saving_schemes')
         .select('*')
@@ -148,12 +143,13 @@ const formatAccountNumber = (accountNumber: string | null) => {
 }
 
 export default async function MemberProfilePage({ params }: { params: { id: string } }) {
-  const member = await getMember(params.id);
-  const shares = await getShares(params.id);
-  const savings = await getSavings(params.id);
-  const loans = await getLoans(params.id);
-  const loanSchemes = await getLoanSchemes();
-  const savingSchemes = await getSavingSchemes();
+  const supabase = createSupabaseServerClient();
+  const member = await getMember(supabase, params.id);
+  const shares = await getShares(supabase, params.id);
+  const savings = await getSavings(supabase, params.id);
+  const loans = await getLoans(supabase, params.id);
+  const loanSchemes = await getLoanSchemes(supabase);
+  const savingSchemes = await getSavingSchemes(supabase);
 
   const totalSharesValue = shares.reduce((acc, share) => acc + (share.number_of_shares * share.face_value), 0);
   const totalSharesCount = shares.reduce((acc, share) => acc + share.number_of_shares, 0);
@@ -456,3 +452,5 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
     </main>
   );
 }
+
+    

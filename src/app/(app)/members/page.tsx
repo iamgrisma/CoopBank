@@ -1,12 +1,13 @@
 
+
 import { MembersTable } from "@/components/members/members-table";
 import { AddMember } from "@/components/members/add-member";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 // This page is now revalidated on-demand when a member is added.
 // See the revalidatePath function in the AddMember component.
-async function getMembers() {
-  const supabase = createSupabaseServerClient();
+async function getMembers(supabase: SupabaseClient) {
   // The tables are defined in supabase/setup.sql
   const { data: members, error } = await supabase
     .from('members')
@@ -21,7 +22,8 @@ async function getMembers() {
 }
 
 export default async function MembersPage() {
-  const members = await getMembers();
+  const supabase = createSupabaseServerClient();
+  const members = await getMembers(supabase);
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
@@ -35,3 +37,5 @@ export default async function MembersPage() {
     </main>
   );
 }
+
+    
