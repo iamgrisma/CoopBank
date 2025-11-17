@@ -125,16 +125,16 @@ export function AddMember() {
 
   React.useEffect(() => {
     const fetchData = async () => {
-        const defaultProvinceId = Number(form.getValues("province_code"));
-        const defaultDistrictId = Number(form.getValues("district_code"));
+        const provinceId = Number(form.getValues("province_code"));
+        const districtId = Number(form.getValues("district_code"));
         
-        if (defaultProvinceId) {
-            const districtsData = await getDistricts(defaultProvinceId);
+        if (provinceId) {
+            const districtsData = await getDistricts(provinceId);
             setDistricts(districtsData);
         }
         
-        if (defaultDistrictId) {
-            const localLevelsData = await getLocalLevels(defaultDistrictId);
+        if (districtId) {
+            const localLevelsData = await getLocalLevels(districtId);
             setLocalLevels(localLevelsData);
         }
     };
@@ -148,43 +148,40 @@ export function AddMember() {
         if (watchProvince) {
             const districtsData = await getDistricts(Number(watchProvince));
             setDistricts(districtsData);
-            // Only reset if the form has been interacted with
-            if (form.formState.isDirty) {
-              form.setValue("district_code", "");
-              form.setValue("local_level_code", "");
-              setLocalLevels([]);
-            }
+            form.setValue("district_code", "");
+            form.setValue("local_level_code", "");
+            setLocalLevels([]);
         }
     }
-    fetchDistrictsForProvince();
-  }, [watchProvince, form]);
+    // Only run this effect if the province is changed by the user
+    if (form.formState.isDirty) {
+        fetchDistrictsForProvince();
+    }
+  }, [watchProvince]);
 
    React.useEffect(() => {
     const fetchLocalLevelsForDistrict = async () => {
         if (watchDistrict) {
             const localLevelsData = await getLocalLevels(Number(watchDistrict));
             setLocalLevels(localLevelsData);
-            if (form.formState.isDirty) {
-                // If local levels exist, don't clear it unless it needs to be
-                if (localLevelsData.length > 0) {
-                    // Check if the current local level is valid for the new district
-                    const currentLocalLevel = form.getValues('local_level_code');
-                    if(currentLocalLevel && !localLevelsData.some(l => l.id.toString() === currentLocalLevel)) {
-                        form.setValue("local_level_code", "");
-                    }
-                } else {
-                     form.setValue("local_level_code", "");
+             if (localLevelsData.length > 0) {
+                const currentLocalLevel = form.getValues('local_level_code');
+                if(currentLocalLevel && !localLevelsData.some(l => l.id.toString() === currentLocalLevel)) {
+                    form.setValue("local_level_code", "");
                 }
-            }
+             } else {
+                 form.setValue("local_level_code", "");
+             }
         } else {
              setLocalLevels([]);
-             if (form.formState.isDirty) {
-                form.setValue("local_level_code", "");
-             }
+             form.setValue("local_level_code", "");
         }
     }
-    fetchLocalLevelsForDistrict();
-  }, [watchDistrict, form]);
+    // Only run this effect if the district is changed by the user
+    if (form.formState.isDirty) {
+        fetchLocalLevelsForDistrict();
+    }
+  }, [watchDistrict]);
 
 
   const onSubmit = async (values: MemberFormValues) => {
@@ -195,11 +192,14 @@ export function AddMember() {
         
         const savingTypeCode = "01"; 
 
-        const districtCodeForAcc = values.district_code.toString().padStart(2, '0') || '00';
+        const districtCodeForAcc = values.district_code.toString().padStart(2, '0');
         
         let localLevelCodeForAcc = '00';
         if (values.local_level_code) {
-             localLevelCodeForAcc = values.local_level_code.toString().slice(-2).padStart(2, '0');
+             const localLevel = localLevels.find(l => l.id.toString() === values.local_level_code);
+             if(localLevel) {
+                localLevelCodeForAcc = localLevel.id.toString().slice(-2).padStart(2, '0');
+             }
         }
 
         const fullAccountNumber = `${branchCode}${districtCodeForAcc}${localLevelCodeForAcc}${savingTypeCode}${nextAccNumPart}`;

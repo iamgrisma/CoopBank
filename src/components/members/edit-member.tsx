@@ -140,13 +140,16 @@ export function EditMember({ member }: { member: Member }) {
 
   React.useEffect(() => {
     const fetchData = async () => {
-        if (form.getValues("province_code")) {
-            const districtsData = await getDistricts(Number(form.getValues("province_code")));
+        const provinceId = form.getValues("province_code") ? Number(form.getValues("province_code")) : null;
+        const districtId = form.getValues("district_code") ? Number(form.getValues("district_code")) : null;
+
+        if (provinceId) {
+            const districtsData = await getDistricts(provinceId);
             setDistricts(districtsData);
         }
 
-        if (form.getValues("district_code")) {
-             const localLevelsData = await getLocalLevels(Number(form.getValues("district_code")));
+        if (districtId) {
+             const localLevelsData = await getLocalLevels(districtId);
              setLocalLevels(localLevelsData);
         }
     };
@@ -160,40 +163,42 @@ export function EditMember({ member }: { member: Member }) {
         if (watchProvince) {
             const districtsData = await getDistricts(Number(watchProvince));
             setDistricts(districtsData);
-            if (form.formState.isDirty) {
-              form.setValue("district_code", "");
-              form.setValue("local_level_code", "");
-              setLocalLevels([]);
-            }
+            form.setValue("district_code", "");
+            form.setValue("local_level_code", "");
+            setLocalLevels([]);
         }
     }
-    fetchDistrictsForProvince();
-  }, [watchProvince, form]);
+    // This hook should only run when the user *changes* the province.
+    // The initial load is handled in the `open` effect.
+    const initialProvince = member.province_code;
+    if (watchProvince !== initialProvince) {
+        fetchDistrictsForProvince();
+    }
+  }, [watchProvince]);
 
    React.useEffect(() => {
     const fetchLocalLevelsForDistrict = async () => {
         if (watchDistrict) {
-            if (watchDistrict === "34") { // Sindhuli
-                const localLevelsData = await getLocalLevels(Number(watchDistrict));
-                setLocalLevels(localLevelsData);
-                 if (form.formState.isDirty) {
+            const localLevelsData = await getLocalLevels(Number(watchDistrict));
+            setLocalLevels(localLevelsData);
+             if (localLevelsData.length > 0) {
+                const currentLocalLevel = form.getValues('local_level_code');
+                if(currentLocalLevel && !localLevelsData.some(l => l.id.toString() === currentLocalLevel)) {
                     form.setValue("local_level_code", "");
                 }
-            } else {
-                setLocalLevels([]);
-                if (form.formState.isDirty) {
-                    form.setValue("local_level_code", "00");
-                }
-            }
+             } else {
+                 form.setValue("local_level_code", "");
+             }
         } else {
              setLocalLevels([]);
-             if (form.formState.isDirty) {
-                form.setValue("local_level_code", "");
-             }
+             form.setValue("local_level_code", "");
         }
     }
-    fetchLocalLevelsForDistrict();
-  }, [watchDistrict, form]);
+    const initialDistrict = member.district_code;
+    if (watchDistrict !== initialDistrict) {
+        fetchLocalLevelsForDistrict();
+    }
+  }, [watchDistrict]);
 
   const onSubmit = async (values: MemberFormValues) => {
     setIsSubmitting(true);
