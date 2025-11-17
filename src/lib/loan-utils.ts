@@ -261,13 +261,6 @@ export const allocatePayment = (
     // 1. Sort installments by date, oldest first, to ensure oldest dues are paid first.
     const sortedDues = [...dueInstallments].sort((a,b) => a.paymentDate.getTime() - b.paymentDate.getTime());
 
-    // Helper function to apply payment to a category and reduce remaining amount
-    const pay = (amountToPay: number) => {
-        const paid = Math.min(remainingAmount, amountToPay);
-        remainingAmount -= paid;
-        return paid;
-    };
-
     // 2. Loop through each sorted installment and clear dues according to the hierarchy
     for (const installment of sortedDues) {
         if (remainingAmount <= 0) break;
@@ -276,29 +269,37 @@ export const allocatePayment = (
         if (!waiveFine) {
             const outstandingFine = Math.max(0, installment.penalty - installment.penaltyPaid);
             if (outstandingFine > 0) {
-                allocation.fine += pay(outstandingFine);
+                const amountToPay = Math.min(remainingAmount, outstandingFine);
+                allocation.fine += amountToPay;
+                remainingAmount -= amountToPay;
             }
         }
-        if (remainingAmount <= 0) break;
+        if (remainingAmount <= 0) continue;
         
         // B. Pay Penal Interest
         const outstandingPenalInterest = Math.max(0, installment.penalInterest - installment.penalInterestPaid);
         if (outstandingPenalInterest > 0) {
-            allocation.penalInterest += pay(outstandingPenalInterest);
+            const amountToPay = Math.min(remainingAmount, outstandingPenalInterest);
+            allocation.penalInterest += amountToPay;
+            remainingAmount -= amountToPay;
         }
-        if (remainingAmount <= 0) break;
+        if (remainingAmount <= 0) continue;
 
         // C. Pay Regular Interest
         const outstandingInterest = Math.max(0, installment.interest - installment.interestPaid);
         if (outstandingInterest > 0) {
-            allocation.interest += pay(outstandingInterest);
+            const amountToPay = Math.min(remainingAmount, outstandingInterest);
+            allocation.interest += amountToPay;
+            remainingAmount -= amountToPay;
         }
-        if (remainingAmount <= 0) break;
+        if (remainingAmount <= 0) continue;
 
         // D. Pay Principal
         const outstandingPrincipal = Math.max(0, installment.principal - installment.principalPaid);
         if (outstandingPrincipal > 0) {
-            allocation.principal += pay(outstandingPrincipal);
+            const amountToPay = Math.min(remainingAmount, outstandingPrincipal);
+            allocation.principal += amountToPay;
+            remainingAmount -= amountToPay;
         }
     }
 
