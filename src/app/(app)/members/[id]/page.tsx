@@ -134,6 +134,16 @@ const formatCurrency = (amount: number) => {
       minimumFractionDigits: 2,
     }).format(amount).replace('NPR', 'रु');
   }
+  
+const formatAccountNumber = (accountNumber: string | null) => {
+    if (!accountNumber) return 'N/A';
+    // Format: xxx-xx-xx-xx-xxxxxxx
+    const match = accountNumber.match(/^(\d{3})(\d{2})(\d{2})(\d{2})(\d{7})$/);
+    if (match) {
+        return `${match[1]}-${match[2]}-${match[3]}-${match[4]}-${match[5]}`;
+    }
+    return accountNumber;
+}
 
 export default async function MemberProfilePage({ params }: { params: { id: string } }) {
   const member = await getMember(params.id);
@@ -178,6 +188,9 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                 <p className="text-sm text-muted-foreground">
                     Joined on {format(new Date(member.join_date), "do MMMM, yyyy")}
                 </p>
+                 <p className="text-xs text-muted-foreground pt-2">
+                    A/C: {formatAccountNumber(member.account_number)}
+                </p>
             </CardHeader>
             <CardContent className="text-sm">
                 <div className="grid gap-3">
@@ -204,10 +217,11 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
 
         <div className="md:col-span-2">
             <Tabs defaultValue="shares">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-5">
                     <TabsTrigger value="shares">Shares</TabsTrigger>
                     <TabsTrigger value="savings">Savings</TabsTrigger>
                     <TabsTrigger value="loans">Loans</TabsTrigger>
+                    <TabsTrigger value="statement">Statement</TabsTrigger>
                     <TabsTrigger value="details">Details</TabsTrigger>
                 </TabsList>
                 <TabsContent value="shares">
@@ -367,6 +381,16 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                                     ))}
                                 </TableBody>
                             </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                 <TabsContent value="statement">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Account Statement</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-muted-foreground">Feature coming soon.</p>
                         </CardContent>
                     </Card>
                 </TabsContent>

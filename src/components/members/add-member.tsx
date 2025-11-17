@@ -42,11 +42,29 @@ const memberFormSchema = z.object({
   dob: z.date().optional(),
   nominee_name: z.string().optional(),
   nominee_relationship: z.string().optional(),
+  district_code: z.string().length(2, "Must be 2 digits").regex(/^\d+$/, "Must be digits"),
+  local_level_code: z.string().length(2, "Must be 2 digits").regex(/^\d+$/, "Must be digits"),
 });
 
 type MemberFormValues = z.infer<typeof memberFormSchema>;
 
-async function addMemberToDb(member: Omit<MemberFormValues, 'join_date' | 'dob'> & { join_date: string, dob?: string }) {
+async function getNextAccountNumber() {
+    const { count, error } = await supabase
+        .from('members')
+        .select('*', { count: 'exact', head: true });
+    
+    if (error) {
+        console.error('Error fetching member count for A/C number:', error);
+        // Fallback in case of error
+        return `0000${Math.floor(Math.random() * 1000)}`.slice(-7);
+    }
+    
+    const nextVal = (count || 0) + 100; // Start from 100
+    return nextVal.toString().padStart(7, '0');
+}
+
+
+async function addMemberToDb(member: Omit<MemberFormValues, 'join_date' | 'dob'> & { join_date: string, dob?: string, account_number: string }) {
     const { data, error } = await supabase.from("members").insert([member]).select();
     
     if (error) {
@@ -71,17 +89,29 @@ export function AddMember() {
       address: "",
       join_date: new Date(),
       nominee_name: "",
-      nominee_relationship: ""
+      nominee_relationship: "",
+      district_code: "01",
+      local_level_code: "01",
     },
   });
 
   const onSubmit = async (values: MemberFormValues) => {
     setIsSubmitting(true);
     try {
+        const branchCode = "001";
+        const nextAccNumPart = await getNextAccountNumber();
+        
+        // Temporarily using hardcoded '01' for saving type as it's the most common.
+        // A more robust solution might involve another form field if needed.
+        const savingTypeCode = "01"; 
+
+        const fullAccountNumber = `${branchCode}${values.district_code}${values.local_level_code}${savingTypeCode}${nextAccNumPart}`;
+
         const memberData = {
             ...values,
             join_date: values.join_date.toISOString(),
             dob: values.dob ? values.dob.toISOString() : undefined,
+            account_number: fullAccountNumber,
         }
       await addMemberToDb(memberData);
       toast({
@@ -110,7 +140,7 @@ export function AddMember() {
           Add Member
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Add New Member</DialogTitle>
           <DialogDescription>
@@ -171,6 +201,34 @@ export function AddMember() {
                 </FormItem>
               )}
             />
+            <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="district_code"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>District Code</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. 01" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={form.control}
+                  name="local_level_code"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Local Level Code</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. 01" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+            </div>
              <FormField
               control={form.control}
               name="join_date"
