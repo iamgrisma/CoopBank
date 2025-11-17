@@ -1,7 +1,4 @@
-
-"use client";
-
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
     Card,
     CardContent,
@@ -9,25 +6,7 @@ import {
     CardHeader,
     CardTitle,
   } from "@/components/ui/card"
-import { supabase } from "@/lib/supabase-client"
-import { Skeleton } from '@/components/ui/skeleton';
-
-function ReportsPageSkeleton() {
-    return (
-        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-            <div className="flex items-center">
-                <Skeleton className="h-8 w-56" />
-            </div>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <Skeleton className="h-28" />
-                <Skeleton className="h-28" />
-                <Skeleton className="h-28" />
-                <Skeleton className="h-28" />
-                <Skeleton className="h-28" />
-            </div>
-        </main>
-    );
-}
+import { createSupabaseServerClient } from "@/lib/supabase-server"
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -37,44 +16,35 @@ const formatCurrency = (amount: number) => {
     }).format(amount).replace('NPR', 'रु');
 }
 
-export default function ReportsPage() {
-    const [summary, setSummary] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        async function getFinancialSummary() {
-            setLoading(true);
-            const [sharesRes, savingsRes, loansRes, transactionsRes] = await Promise.all([
-                supabase.from('shares').select('number_of_shares, face_value'),
-                supabase.from('savings').select('amount'),
-                supabase.from('loans').select('amount'),
-                supabase.from('transactions').select('type, amount')
-            ]);
-            
-            if (sharesRes.error || savingsRes.error || loansRes.error || transactionsRes.error) {
-                console.error({ sharesError: sharesRes.error, savingsError: savingsRes.error, loansError: loansRes.error, transactionsError: transactionsRes.error });
-                setSummary({ shareCapital: 0, totalSavings: 0, totalLoans: 0, interestIncome: 0, penaltyIncome: 0 });
-            } else {
-                const shareCapital = (sharesRes.data || []).reduce((acc: number, s: any) => acc + (s.number_of_shares * s.face_value), 0);
-                const totalSavings = (savingsRes.data || []).reduce((acc: number, s: any) => acc + s.amount, 0);
-                const totalLoans = (loansRes.data || []).reduce((acc: number, l: any) => acc + l.amount, 0);
-                const interestIncome = (transactionsRes.data || [])
-                    .filter(t => t.type === 'Loan Interest')
-                    .reduce((acc, t) => acc + t.amount, 0);
-                const penaltyIncome = (transactionsRes.data || [])
-                    .filter(t => t.type === 'Penalty Income')
-                    .reduce((acc, t) => acc + t.amount, 0);
-                
-                setSummary({ shareCapital, totalSavings, totalLoans, interestIncome, penaltyIncome });
-            }
-            setLoading(false);
-        }
-        getFinancialSummary();
-    }, []);
-
-    if (loading || !summary) {
-        return <ReportsPageSkeleton />;
+async function getFinancialSummary() {
+    const supabase = createSupabaseServerClient();
+    const [sharesRes, savingsRes, loansRes, transactionsRes] = await Promise.all([
+        supabase.from('shares').select('number_of_shares, face_value'),
+        supabase.from('savings').select('amount'),
+        supabase.from('loans').select('amount'),
+        supabase.from('transactions').select('type, amount')
+    ]);
+    
+    if (sharesRes.error || savingsRes.error || loansRes.error || transactionsRes.error) {
+        console.error({ sharesError: sharesRes.error, savingsError: savingsRes.error, loansError: loansRes.error, transactionsError: transactionsRes.error });
+        return { shareCapital: 0, totalSavings: 0, totalLoans: 0, interestIncome: 0, penaltyIncome: 0 };
     }
+    
+    const shareCapital = (sharesRes.data || []).reduce((acc: number, s: any) => acc + (s.number_of_shares * s.face_value), 0);
+    const totalSavings = (savingsRes.data || []).reduce((acc: number, s: any) => acc + s.amount, 0);
+    const totalLoans = (loansRes.data || []).reduce((acc: number, l: any) => acc + l.amount, 0);
+    const interestIncome = (transactionsRes.data || [])
+        .filter(t => t.type === 'Loan Interest')
+        .reduce((acc, t) => acc + t.amount, 0);
+    const penaltyIncome = (transactionsRes.data || [])
+        .filter(t => t.type === 'Penalty Income')
+        .reduce((acc, t) => acc + t.amount, 0);
+    
+    return { shareCapital, totalSavings, totalLoans, interestIncome, penaltyIncome };
+}
+
+export default async function ReportsPage() {
+    const summary = await getFinancialSummary();
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">

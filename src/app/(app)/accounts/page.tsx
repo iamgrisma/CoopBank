@@ -1,7 +1,4 @@
-
-"use client";
-
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -15,8 +12,7 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
-import { supabase } from '@/lib/supabase-client';
-import { Skeleton } from '@/components/ui/skeleton';
+import { createSupabaseServerClient } from '@/lib/supabase-server';
 
 type Account = {
   account_number: string | null;
@@ -31,20 +27,6 @@ type MemberWithAccounts = {
   photo_url: string | null;
   accounts: Account[];
 };
-
-function AccountsPageSkeleton() {
-    return (
-        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-            <div className="flex items-center">
-                <Skeleton className="h-8 w-48" />
-            </div>
-            <Skeleton className="h-10 w-full" />
-            <div className="rounded-lg border shadow-sm overflow-hidden">
-                <Skeleton className="h-96 w-full" />
-            </div>
-        </main>
-    )
-}
 
 const getInitials = (name: string | undefined) => {
   if (!name) return "U";
@@ -125,118 +107,97 @@ function AccountsTable({ members }: { members: MemberWithAccounts[] }) {
     )
 }
 
-export default function AccountsPage() {
-    const [allMembersWithAccounts, setAllMembersWithAccounts] = useState<MemberWithAccounts[]>([]);
-    const [loading, setLoading] = useState(true);
+async function getMemberAccounts() {
+    const supabase = createSupabaseServerClient();
+    const { data: members, error: membersError } = await supabase
+        .from('members')
+        .select('id, name, photo_url, account_number')
+        .order('name');
 
-    useEffect(() => {
-        async function getMemberAccounts() {
-            setLoading(true);
-            const { data: members, error: membersError } = await supabase
-                .from('members')
-                .select('id, name, photo_url, account_number')
-                .order('name');
+    if (membersError) {
+        console.error('Error fetching members:', membersError);
+        return [];
+    }
 
-            if (membersError) {
-                console.error('Error fetching members:', membersError);
-                setAllMembersWithAccounts([]);
-                setLoading(false);
-                return;
+    const memberIds = members.map(m => m.id);
+
+    const [transactionsRes, savingsRes, loansRes] = await Promise.all([
+        supabase.from('transactions').select('member_id, type, amount').in('member_id', memberIds).in('type', ['Savings Deposit', 'Loan Repayment', 'Share Purchase', 'Loan Disbursement', 'Withdrawal']),
+        supabase.from('savings').select(`member_id, amount, saving_schemes (name, type)`).in('member_id', memberIds),
+        supabase.from('loans').select(`member_id, amount, loan_schemes (name)`).in('member_id', memberIds).in('status', ['Active', 'Pending'])
+    ]);
+
+    if (savingsRes.error || loansRes.error || transactionsRes.error) {
+        console.error({ savingsError: savingsRes.error, loansError: loansRes.error, transactionsError: transactionsRes.error });
+    }
+
+    const membersMap = new Map<string, MemberWithAccounts>();
+    const currentBalances = new Map<string, number>();
+
+    if (transactionsRes.data) {
+        for (const t of transactionsRes.data) {
+            const currentBalance = currentBalances.get(t.member_id) || 0;
+            if (['Savings Deposit', 'Share Purchase', 'Loan Repayment'].includes(t.type)) {
+                currentBalances.set(t.member_id, currentBalance + t.amount);
+            } else if (['Loan Disbursement', 'Withdrawal', 'Savings Withdrawal'].includes(t.type)) {
+                currentBalances.set(t.member_id, currentBalance - t.amount);
             }
+        }
+    }
 
-            const memberIds = members.map(m => m.id);
+    for (const member of members) {
+        membersMap.set(member.id, {
+            id: member.id,
+            name: member.name,
+            photo_url: member.photo_url,
+            accounts: [{
+                account_number: member.account_number,
+                type: 'Current',
+                balance: currentBalances.get(member.id) || 0,
+                scheme_name: 'Primary Account'
+            }]
+        });
+    }
 
-            const { data: transactions, error: transactionsError } = await supabase
-                .from('transactions')
-                .select('member_id, type, amount')
-                .in('member_id', memberIds)
-                .in('type', ['Savings Deposit', 'Loan Repayment', 'Share Purchase', 'Loan Disbursement', 'Withdrawal']);
-
-            const { data: savings, error: savingsError } = await supabase
-                .from('savings')
-                .select(`member_id, amount, saving_schemes (name, type)`)
-                .in('member_id', memberIds);
-
-            const { data: loans, error: loansError } = await supabase
-                .from('loans')
-                .select(`member_id, amount, loan_schemes (name)`)
-                .in('member_id', memberIds)
-                .in('status', ['Active', 'Pending']);
-            
-            if (savingsError || loansError || transactionsError) {
-                console.error({ savingsError, loansError, transactionsError });
-            }
-
-            const membersMap = new Map<string, MemberWithAccounts>();
-            const currentBalances = new Map<string, number>();
-
-            if (transactions) {
-                for (const t of transactions) {
-                    const currentBalance = currentBalances.get(t.member_id) || 0;
-                    if (['Savings Deposit', 'Share Purchase', 'Loan Repayment'].includes(t.type)) {
-                        currentBalances.set(t.member_id, currentBalance + t.amount);
-                    } else if (['Loan Disbursement', 'Withdrawal', 'Savings Withdrawal'].includes(t.type)) {
-                        currentBalances.set(t.member_id, currentBalance - t.amount);
-                    }
+    if (savingsRes.data) {
+        for (const saving of savingsRes.data) {
+            const member = membersMap.get(saving.member_id);
+            if (member && saving.saving_schemes) {
+                const accountType = saving.saving_schemes.type === 'LTD' ? 'LTD' : 'Saving';
+                const existingAccount = member.accounts.find(a => a.scheme_name === saving.saving_schemes!.name && a.type === accountType);
+                if (existingAccount) {
+                    existingAccount.balance += saving.amount;
+                } else {
+                    member.accounts.push({
+                        account_number: member.accounts[0]?.account_number || null,
+                        type: accountType,
+                        balance: saving.amount,
+                        scheme_name: saving.saving_schemes.name
+                    });
                 }
             }
-
-            for (const member of members) {
-                membersMap.set(member.id, {
-                    id: member.id,
-                    name: member.name,
-                    photo_url: member.photo_url,
-                    accounts: [{
-                        account_number: member.account_number,
-                        type: 'Current',
-                        balance: currentBalances.get(member.id) || 0,
-                        scheme_name: 'Primary Account'
-                    }]
+        }
+    }
+    
+    if (loansRes.data) {
+        for (const loan of loansRes.data) {
+            const member = membersMap.get(loan.member_id);
+            if (member && loan.loan_schemes) {
+                member.accounts.push({
+                    account_number: member.accounts[0]?.account_number || null,
+                    type: 'Loan',
+                    balance: loan.amount,
+                    scheme_name: loan.loan_schemes.name
                 });
             }
-
-            if (savings) {
-                for (const saving of savings) {
-                    const member = membersMap.get(saving.member_id);
-                    if (member && saving.saving_schemes) {
-                        const accountType = saving.saving_schemes.type === 'LTD' ? 'LTD' : 'Saving';
-                        const existingAccount = member.accounts.find(a => a.scheme_name === saving.saving_schemes!.name && a.type === accountType);
-                        if (existingAccount) {
-                            existingAccount.balance += saving.amount;
-                        } else {
-                            member.accounts.push({
-                                account_number: member.accounts[0]?.account_number || null,
-                                type: accountType,
-                                balance: saving.amount,
-                                scheme_name: saving.saving_schemes.name
-                            });
-                        }
-                    }
-                }
-            }
-            
-            if (loans) {
-                for (const loan of loans) {
-                    const member = membersMap.get(loan.member_id);
-                    if (member && loan.loan_schemes) {
-                        member.accounts.push({
-                            account_number: member.accounts[0]?.account_number || null,
-                            type: 'Loan',
-                            balance: loan.amount,
-                            scheme_name: loan.loan_schemes.name
-                        });
-                    }
-                }
-            }
-            setAllMembersWithAccounts(Array.from(membersMap.values()));
-            setLoading(false);
         }
-        getMemberAccounts();
-    }, []);
-
-    if (loading) {
-        return <AccountsPageSkeleton />;
     }
+    return Array.from(membersMap.values());
+}
+
+
+export default async function AccountsPage() {
+    const allMembersWithAccounts = await getMemberAccounts();
 
     const filterAccounts = (type: Account['type'] | 'All') => {
         if (type === 'All') return allMembersWithAccounts;

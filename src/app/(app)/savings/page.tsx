@@ -1,62 +1,32 @@
-
-"use client";
-
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { AddSaving } from "@/components/savings/add-saving";
 import { SavingsTable } from "@/components/savings/savings-table";
 import { Button } from "@/components/ui/button";
 import { MinusCircle, PlusCircle } from "lucide-react";
 import { AddWithdrawal } from "@/components/savings/withdrawals/add-withdrawal";
-import { supabase } from "@/lib/supabase-client";
-import { Skeleton } from '@/components/ui/skeleton';
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 
-function SavingsPageSkeleton() {
-    return (
-        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-            <div className="flex items-center">
-                <Skeleton className="h-8 w-48" />
-                <div className="ml-auto flex items-center gap-2">
-                    <Skeleton className="h-10 w-32" />
-                    <Skeleton className="h-10 w-36" />
-                </div>
-            </div>
-            <div className="rounded-lg border shadow-sm overflow-hidden">
-                <Skeleton className="h-96 w-full" />
-            </div>
-        </main>
-    );
+async function getPageData() {
+    const supabase = createSupabaseServerClient();
+    const [savingsRes, membersRes, savingSchemesRes] = await Promise.all([
+        supabase.from('savings').select(`*, members (id, name), saving_schemes (id, name)`).order('deposit_date', { ascending: false }),
+        supabase.from('members').select('id, name').order('name', { ascending: true }),
+        supabase.from('saving_schemes').select('*').order('name', { ascending: true })
+    ]);
+    
+    if (savingsRes.error) console.error('Error fetching savings:', savingsRes.error);
+    if (membersRes.error) console.error('Error fetching members:', membersRes.error);
+    if (savingSchemesRes.error) console.error('Error fetching saving schemes:', savingSchemesRes.error);
+
+    return {
+        savings: savingsRes.data || [],
+        members: membersRes.data || [],
+        savingSchemes: savingSchemesRes.data || [],
+    }
 }
 
-export default function SavingsPage() {
-  const [savings, setSavings] = useState<any[]>([]);
-  const [members, setMembers] = useState<any[]>([]);
-  const [savingSchemes, setSavingSchemes] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function getPageData() {
-        setLoading(true);
-        const [savingsRes, membersRes, savingSchemesRes] = await Promise.all([
-            supabase.from('savings').select(`*, members (id, name), saving_schemes (id, name)`).order('deposit_date', { ascending: false }),
-            supabase.from('members').select('id, name').order('name', { ascending: true }),
-            supabase.from('saving_schemes').select('*').order('name', { ascending: true })
-        ]);
-        
-        if (savingsRes.error) console.error('Error fetching savings:', savingsRes.error);
-        if (membersRes.error) console.error('Error fetching members:', membersRes.error);
-        if (savingSchemesRes.error) console.error('Error fetching saving schemes:', savingSchemesRes.error);
-
-        setSavings(savingsRes.data || []);
-        setMembers(membersRes.data || []);
-        setSavingSchemes(savingSchemesRes.data || []);
-        setLoading(false);
-    }
-    getPageData();
-  }, []);
-
-  if (loading) {
-      return <SavingsPageSkeleton />;
-  }
+export default async function SavingsPage() {
+  const { savings, members, savingSchemes } = await getPageData();
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
@@ -84,7 +54,9 @@ export default function SavingsPage() {
           />
         </div>
       </div>
-      <SavingsTable savings={savings} />
+      <div className="overflow-x-auto">
+        <SavingsTable savings={savings} />
+      </div>
     </main>
   );
 }

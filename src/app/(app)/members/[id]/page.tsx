@@ -1,9 +1,5 @@
-
-"use client";
-
 import { notFound } from "next/navigation";
 import Image from "next/image";
-import { useState, useEffect, useCallback } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,8 +17,7 @@ import { calculateAccruedInterestForAllSavings } from "@/lib/saving-utils";
 import { formatCurrency } from "@/lib/utils";
 import { AccountStatement } from "@/components/members/account-statement";
 import { generateDynamicAmortizationSchedule, Repayment, RepaymentFrequency } from "@/lib/loan-utils";
-import { supabase } from "@/lib/supabase-client";
-import { Skeleton } from "@/components/ui/skeleton";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 const getInitials = (name: string | undefined) => {
   if (!name) return "U";
@@ -69,57 +64,19 @@ function StatCard({ title, value, icon: Icon, description }: { title: string, va
     )
 }
 
-function MemberProfileSkeleton() {
-    return (
-        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-            <Card className="w-full">
-                <CardContent className="p-6 flex flex-col md:flex-row items-start gap-6">
-                    <Skeleton className="h-28 w-28 rounded-full shrink-0" />
-                    <div className="flex-grow space-y-4">
-                        <Skeleton className="h-8 w-1/2" />
-                        <Skeleton className="h-4 w-3/4" />
-                        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
-                            <Skeleton className="h-10 w-full" />
-                            <Skeleton className="h-10 w-full" />
-                            <Skeleton className="h-10 w-full" />
-                            <Skeleton className="h-10 w-full" />
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-            <div className="w-full">
-                <Skeleton className="h-10 w-full max-w-lg mb-2" />
-                <Skeleton className="h-96 w-full" />
-            </div>
-        </main>
-    );
-}
-
-export default function MemberProfilePage({ params }: { params: { id: string } }) {
-  const [member, setMember] = useState<any>(null);
-  const [shares, setShares] = useState<any[]>([]);
-  const [savings, setSavings] = useState<any[]>([]);
-  const [loans, setLoans] = useState<any[]>([]);
-  const [loanSchemes, setLoanSchemes] = useState<any[]>([]);
-  const [savingSchemes, setSavingSchemes] = useState<any[]>([]);
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [allRepayments, setAllRepayments] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchMemberData = useCallback(async () => {
-    setLoading(true);
+async function getMemberData(id: string) {
+    const supabase = createSupabaseServerClient();
+    
     const { data: memberData, error: memberError } = await supabase
       .from("members")
       .select(`*`)
-      .eq("id", params.id)
+      .eq("id", id)
       .single();
     
     if (memberError || !memberData) {
       console.error("Error fetching member:", memberError?.message);
-      setLoading(false);
       return notFound();
     }
-    setMember(memberData);
 
     const [
         sharesRes,
@@ -127,43 +84,42 @@ export default function MemberProfilePage({ params }: { params: { id: string } }
         loansRes,
         loanSchemesRes,
         savingSchemesRes,
-        transactionsRes
+        transactionsRes,
+        allRepaymentsRes,
     ] = await Promise.all([
-        supabase.from('shares').select('*').eq('member_id', params.id).order('purchase_date', { ascending: false }),
-        supabase.from('savings').select('*, saving_schemes (id, name, type, interest_rate)').eq('member_id', params.id).order('deposit_date', { ascending: false }),
-        supabase.from('loans').select('*, loan_schemes (name, repayment_frequency, grace_period_months), members (id, name)').eq('member_id', params.id).order('disbursement_date', { ascending: false }),
+        supabase.from('shares').select('*').eq('member_id', id).order('purchase_date', { ascending: false }),
+        supabase.from('savings').select('*, saving_schemes (id, name, type, interest_rate)').eq('member_id', id).order('deposit_date', { ascending: false }),
+        supabase.from('loans').select('*, loan_schemes (name, repayment_frequency, grace_period_months), members (id, name)').eq('member_id', id).order('disbursement_date', { ascending: false }),
         supabase.from('loan_schemes').select('*').order('name', { ascending: true }),
         supabase.from('saving_schemes').select('*').order('name', { ascending: true }),
-        supabase.from('transactions').select('*').eq('member_id', params.id).order('date', { ascending: true })
+        supabase.from('transactions').select('*').eq('member_id', id).order('date', { ascending: true }),
+        supabase.from('loan_repayments').select('*').in('loan_id', (await supabase.from('loans').select('id').eq('member_id', id)).data?.map(l => l.id) || []),
     ]);
 
-    setShares(sharesRes.data || []);
-    setSavings(savingsRes.data || []);
-    setLoans(loansRes.data || []);
-    setLoanSchemes(loanSchemesRes.data || []);
-    setSavingSchemes(savingSchemesRes.data || []);
-    setTransactions(transactionsRes.data || []);
-
-    if (loansRes.data && loansRes.data.length > 0) {
-        const loanIds = loansRes.data.map(l => l.id);
-        const { data: repaymentsData } = await supabase.from('loan_repayments').select('*').in('loan_id', loanIds);
-        setAllRepayments(repaymentsData || []);
+    return {
+        member: memberData,
+        shares: sharesRes.data || [],
+        savings: savingsRes.data || [],
+        loans: loansRes.data || [],
+        loanSchemes: loanSchemesRes.data || [],
+        savingSchemes: savingSchemesRes.data || [],
+        transactions: transactionsRes.data || [],
+        allRepayments: allRepaymentsRes.data || [],
     }
-    
-    setLoading(false);
-  }, [params.id]);
+}
 
-  useEffect(() => {
-    fetchMemberData();
-  }, [fetchMemberData]);
-  
-  if (loading) {
-      return <MemberProfileSkeleton />;
-  }
 
-  if (!member) {
-      return notFound();
-  }
+export default async function MemberProfilePage({ params }: { params: { id: string } }) {
+  const {
+      member,
+      shares,
+      savings,
+      loans,
+      loanSchemes,
+      savingSchemes,
+      transactions,
+      allRepayments
+  } = await getMemberData(params.id);
 
   const activeLoans = loans.filter(l => !['Paid Off', 'Rejected', 'Restructured'].includes(l.status));
   const activeLoanIds = activeLoans.map(l => l.id);
