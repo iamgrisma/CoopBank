@@ -42,6 +42,7 @@ const memberFormSchema = z.object({
   dob: z.date().optional(),
   nominee_name: z.string().optional(),
   nominee_relationship: z.string().optional(),
+  province_code: z.string().length(1, "Must be 1 digit").regex(/^\d+$/, "Must be a digit"),
   district_code: z.string().length(2, "Must be 2 digits").regex(/^\d+$/, "Must be digits"),
   local_level_code: z.string().length(2, "Must be 2 digits").regex(/^\d+$/, "Must be digits"),
 });
@@ -90,6 +91,7 @@ export function AddMember() {
       join_date: new Date(),
       nominee_name: "",
       nominee_relationship: "",
+      province_code: "1",
       district_code: "01",
       local_level_code: "01",
     },
@@ -201,13 +203,26 @@ export function AddMember() {
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="province_code"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Province</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. 1" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="district_code"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>District Code</FormLabel>
+                      <FormLabel>District</FormLabel>
                       <FormControl>
                         <Input placeholder="e.g. 01" {...field} />
                       </FormControl>
@@ -220,7 +235,7 @@ export function AddMember() {
                   name="local_level_code"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Local Level Code</FormLabel>
+                      <FormLabel>Local Level</FormLabel>
                       <FormControl>
                         <Input placeholder="e.g. 01" {...field} />
                       </FormControl>
