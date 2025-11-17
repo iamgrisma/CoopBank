@@ -301,10 +301,10 @@ export function LoanDetailsDialog({ loan, allLoanSchemes, trigger }: LoanDetails
                             <TableRow>
                             <TableHead>Date</TableHead>
                             <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Principal Due</TableHead>
-                            <TableHead className="text-right">Interest Due</TableHead>
+                            <TableHead className="text-right">Principal</TableHead>
+                            <TableHead className="text-right">Interest</TableHead>
                             <TableHead className="text-right">Penal Interest</TableHead>
-                            <TableHead className="text-right">Fine Due</TableHead>
+                            <TableHead className="text-right">Fine</TableHead>
                             <TableHead className="text-right">Total Due</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -315,10 +315,10 @@ export function LoanDetailsDialog({ loan, allLoanSchemes, trigger }: LoanDetails
                             <TableRow key={entry.month} className={entry.status === 'OVERDUE' ? 'bg-red-50 dark:bg-red-900/20' : ''}>
                                 <TableCell>{format(entry.paymentDate, "do MMM, yyyy")}</TableCell>
                                 <TableCell>{getStatusBadge(entry.status)}</TableCell>
-                                <TableCell className="text-right">{formatCurrency(Math.max(0, entry.principal - entry.principalPaid))}</TableCell>
-                                <TableCell className="text-right">{formatCurrency(Math.max(0, entry.interest - entry.interestPaid))}</TableCell>
-                                <TableCell className="text-right">{formatCurrency(Math.max(0, entry.penalInterest - entry.penalInterestPaid))}</TableCell>
-                                <TableCell className="text-right">{formatCurrency(Math.max(0, entry.penalty - entry.penaltyPaid))}</TableCell>
+                                <TableCell className="text-right">{formatCurrency(entry.principal)}</TableCell>
+                                <TableCell className="text-right">{formatCurrency(entry.interest)}</TableCell>
+                                <TableCell className="text-right">{formatCurrency(entry.penalInterest)}</TableCell>
+                                <TableCell className="text-right">{formatCurrency(entry.penalty)}</TableCell>
                                 <TableCell className="text-right font-semibold">{formatCurrency(entry.totalDue)}</TableCell>
                             </TableRow>
                             )) : (
