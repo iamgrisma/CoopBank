@@ -1,3 +1,4 @@
+
 "use client"
 
 import {
@@ -10,11 +11,12 @@ import {
 import {
   ChartContainer,
   ChartTooltip,
+  ChartTooltipContent,
 } from "@/components/ui/chart"
 import { format } from "date-fns"
-import { Area, AreaChart, CartesianGrid, XAxis, TooltipProps } from "recharts"
+import { Area, AreaChart, CartesianGrid, XAxis } from "recharts"
 import React from "react"
-import { cn } from "@/lib/utils"
+import { ChartConfig } from "@/components/ui/chart"
 
 type Transaction = {
   id: string;
@@ -25,34 +27,18 @@ type Transaction = {
   amount: number;
 };
 
-const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="p-2 text-sm border bg-background/95 backdrop-blur-sm rounded-lg shadow-lg">
-        <div className="flex flex-col">
-            <span className="font-medium text-muted-foreground">{label}</span>
-            <span className="font-bold text-lg">{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'NPR', minimumFractionDigits: 0 }).format(payload[0].value as number).replace('NPR', 'रु')}</span>
-        </div>
-      </div>
-    );
-  }
-
-  return null;
-};
-
+const chartConfig = {
+  amount: {
+    label: "Amount",
+    color: "hsl(var(--chart-1))",
+  },
+} satisfies ChartConfig
 
 export function CashFlowChart({ transactions }: { transactions: Transaction[] }) {
   const chartData = transactions.map(t => ({
     date: format(new Date(t.date), "MMM d"),
     amount: t.amount,
   })).reverse(); // reverse to show oldest first
-
-  const chartConfig = {
-    amount: {
-      label: "Amount",
-      color: "hsl(var(--chart-1))",
-    },
-  }
 
   return (
     <Card>
@@ -82,7 +68,10 @@ export function CashFlowChart({ transactions }: { transactions: Transaction[] })
             />
             <ChartTooltip
               cursor={false}
-              content={<CustomTooltip />}
+              content={<ChartTooltipContent 
+                formatter={(value) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'NPR', minimumFractionDigits: 0 }).format(value as number).replace('NPR', 'रु')}
+                indicator="dot" 
+              />}
             />
             <Area
               dataKey="amount"

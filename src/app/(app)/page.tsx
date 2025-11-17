@@ -1,91 +1,132 @@
 
+"use client";
+
+import React, { useState, useEffect } from 'react';
 import { OverviewCards } from "@/components/dashboard/overview-cards";
 import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { CashFlowChart } from "@/components/dashboard/cash-flow-chart";
-import { FinancialStatements } from "@/components/dashboard/financial-statements";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { UpcomingDues } from "@/components/dashboard/upcoming-dues";
+import { FinancialStatements } from "@/components/dashboard/financial-statements";
+import { supabase } from "@/lib/supabase-client";
+import { Skeleton } from '@/components/ui/skeleton';
 
-async function getDashboardData() {
-  const supabase = createSupabaseServerClient();
+type Transaction = {
+  id: string;
+  member_name: string;
+  type: string;
+  status: 'Completed' | 'Pending';
+  date: string;
+  amount: number;
+};
 
-  const { data: transactions, error: transactionsError } = await supabase
-    .from('transactions')
-    .select('*')
-    .order('date', { ascending: false })
-    .limit(10);
+type OverviewData = {
+  members: number;
+  shares: number;
+  savings: number;
+  loans: number;
+};
 
-  const { count: memberCount, error: memberError } = await supabase
-    .from('members')
-    .select('*', { count: 'exact', head: true });
+type Loan = {
+  id: string;
+  disbursement_date: string;
+  loan_term_months: number;
+  members: {
+    id: string;
+    name: string;
+  } | null;
+};
 
-  const { data: shares, error: sharesError } = await supabase
-    .from('shares')
-    .select('number_of_shares, face_value');
-    
-  const { data: savings, error: savingsError } = await supabase
-    .from('savings')
-    .select('amount');
-  
-  const { data: loans, error: loansError } = await supabase
-    .from('loans')
-    .select('amount')
-    .not('status', 'in', '("Paid Off", "Rejected", "Restructured")');
-    
-  const { data: activeLoans, error: activeLoansError } = await supabase
-    .from('loans')
-    .select(`
-        *,
-        members ( id, name )
-    `)
-    .in('status', ['Active']);
-
-
-  if (transactionsError) {
-    console.error('Error fetching transactions:', transactionsError);
-  }
-  if (memberError) {
-    console.error('Error fetching member count:', memberError);
-  }
-  if (sharesError) {
-    console.error('Error fetching shares:', sharesError);
-  }
-  if (savingsError) {
-    console.error('Error fetching savings:', savingsError);
-  }
-   if (loansError) {
-    console.error('Error fetching loans:', loansError);
-  }
-  if (activeLoansError) {
-    console.error('Error fetching active loans:', activeLoansError);
-  }
-
-  const totalSharesValue = shares ? shares.reduce((acc, share) => acc + (share.number_of_shares * share.face_value), 0) : 0;
-  const totalSavingsValue = savings ? savings.reduce((acc, saving) => acc + saving.amount, 0) : 0;
-  const totalLoansValue = loans ? loans.reduce((acc, loan) => acc + loan.amount, 0) : 0;
-
-  const overview = {
-    members: memberCount ?? 0,
-    shares: totalSharesValue,
-    savings: totalSavingsValue,
-    loans: totalLoansValue,
-  }
-
-  return { 
-    transactions: transactions || [],
-    overview,
-    activeLoans: activeLoans || [],
-  };
+function DashboardSkeleton() {
+    return (
+        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+                <Skeleton className="h-28" />
+                <Skeleton className="h-28" />
+                <Skeleton className="h-28" />
+                <Skeleton className="h-28" />
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:gap-8 lg:grid-cols-5">
+                <div className="grid auto-rows-max items-start gap-4 md:gap-8 lg:col-span-3">
+                    <Skeleton className="h-80" />
+                    <Skeleton className="h-96" />
+                </div>
+                <div className="grid auto-rows-max gap-4 md:gap-8 lg:col-span-2">
+                    <Skeleton className="h-96" />
+                    <Skeleton className="h-64" />
+                </div>
+            </div>
+        </main>
+    );
 }
 
 
-export default async function DashboardPage() {
-  const { transactions, overview, activeLoans } = await getDashboardData();
+export default function DashboardPage() {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [overview, setOverview] = useState<OverviewData | null>(null);
+  const [activeLoans, setActiveLoans] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function getDashboardData() {
+      setLoading(true);
+      const { data: transactionsData, error: transactionsError } = await supabase
+        .from('transactions')
+        .select('*')
+        .order('date', { ascending: false })
+        .limit(10);
+
+      const { count: memberCount, error: memberError } = await supabase
+        .from('members')
+        .select('*', { count: 'exact', head: true });
+
+      const { data: shares, error: sharesError } = await supabase
+        .from('shares')
+        .select('number_of_shares, face_value');
+        
+      const { data: savings, error: savingsError } = await supabase
+        .from('savings')
+        .select('amount');
+      
+      const { data: loans, error: loansError } = await supabase
+        .from('loans')
+        .select('amount')
+        .not('status', 'in', '("Paid Off", "Rejected", "Restructured")');
+        
+      const { data: activeLoansData, error: activeLoansError } = await supabase
+        .from('loans')
+        .select(`*, members ( id, name )`)
+        .in('status', ['Active']);
+
+      if (transactionsError || memberError || sharesError || savingsError || loansError || activeLoansError) {
+        console.error({ transactionsError, memberError, sharesError, savingsError, loansError, activeLoansError });
+      }
+
+      const totalSharesValue = shares ? shares.reduce((acc, share) => acc + (share.number_of_shares * share.face_value), 0) : 0;
+      const totalSavingsValue = savings ? savings.reduce((acc, saving) => acc + saving.amount, 0) : 0;
+      const totalLoansValue = loans ? loans.reduce((acc, loan) => acc + loan.amount, 0) : 0;
+
+      setTransactions(transactionsData || []);
+      setOverview({
+        members: memberCount ?? 0,
+        shares: totalSharesValue,
+        savings: totalSavingsValue,
+        loans: totalLoansValue,
+      });
+      setActiveLoans(activeLoansData || []);
+      setLoading(false);
+    }
+
+    getDashboardData();
+  }, []);
+
+  if (loading) {
+    return <DashboardSkeleton />;
+  }
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <OverviewCards overview={overview} />
+        {overview && <OverviewCards overview={overview} />}
       </div>
       <div className="grid grid-cols-1 gap-4 md:gap-8 lg:grid-cols-5">
         <div className="grid auto-rows-max items-start gap-4 md:gap-8 lg:col-span-3">

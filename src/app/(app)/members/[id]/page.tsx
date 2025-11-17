@@ -1,149 +1,28 @@
 
+"use client";
+
 import { notFound } from "next/navigation";
 import Image from "next/image";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { useState, useEffect, useCallback } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, differenceInYears } from "date-fns";
-import { AtSign, Cake, HandCoins, MapPin, Phone, PlusCircle, Scale, TrendingDown, TrendingUp, User, UserCheck, Wallet, Briefcase } from "lucide-react";
+import { AtSign, Cake, HandCoins, MapPin, Phone, PlusCircle, Scale, TrendingDown, TrendingUp, User, UserCheck, Wallet, Briefcase, Info } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AddShare } from "@/components/shares/add-share";
 import { Button } from "@/components/ui/button";
 import { AddSaving } from "@/components/savings/add-saving";
 import { AddLoan } from "@/components/loans/add-loan";
 import { Badge } from "@/components/ui/badge";
-import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { LoanDetailsDialog } from "@/components/loans/loan-details-dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { calculateAccruedInterestForAllSavings } from "@/lib/saving-utils";
 import { formatCurrency } from "@/lib/utils";
 import { AccountStatement } from "@/components/members/account-statement";
 import { generateDynamicAmortizationSchedule, Repayment, RepaymentFrequency } from "@/lib/loan-utils";
-
-async function getMember(supabase: SupabaseClient, id: string) {
-  const { data: member, error } = await supabase
-    .from("members")
-    .select(`*`)
-    .eq("id", id)
-    .single();
-  
-  if (error) {
-    console.error("Error fetching member:", error.message);
-    return null;
-  }
-
-  return member;
-}
-
-async function getShares(supabase: SupabaseClient, memberId: string) {
-    const { data: shares, error } = await supabase
-        .from('shares')
-        .select('*')
-        .eq('member_id', memberId)
-        .order('purchase_date', { ascending: false });
-
-    if (error) {
-        console.error('Error fetching shares:', error);
-        return [];
-    }
-
-    return shares;
-}
-
-async function getSavings(supabase: SupabaseClient, memberId: string) {
-    const { data: savings, error } = await supabase
-        .from('savings')
-        .select(`
-            *,
-            saving_schemes (
-                id,
-                name,
-                type,
-                interest_rate
-            )
-        `)
-        .eq('member_id', memberId)
-        .order('deposit_date', { ascending: false });
-
-    if (error) {
-        console.error('Error fetching savings:', error);
-        return [];
-    }
-    return savings;
-}
-
-async function getLoans(supabase: SupabaseClient, memberId: string) {
-  const { data, error } = await supabase
-    .from('loans')
-    .select(`
-      *,
-      loan_schemes (name, repayment_frequency, grace_period_months),
-      members (id, name)
-    `)
-    .eq('member_id', memberId)
-    .order('disbursement_date', { ascending: false });
-
-  if (error) {
-    console.error('Error fetching loans:', error);
-    return [];
-  }
-  return data;
-}
-
-async function getRepayments(supabase: SupabaseClient, loanIds: string[]) {
-    if (loanIds.length === 0) return [];
-    const { data, error } = await supabase
-        .from('loan_repayments')
-        .select('*')
-        .in('loan_id', loanIds);
-    
-    if (error) {
-        console.error('Error fetching repayments:', error);
-        return [];
-    }
-    return data;
-}
-
-async function getLoanSchemes(supabase: SupabaseClient) {
-    const { data, error } = await supabase
-        .from('loan_schemes')
-        .select('*')
-        .order('name', { ascending: true });
-    
-    if (error) {
-        console.error('Error fetching loan schemes:', error);
-        return [];
-    }
-    return data;
-}
-
-async function getSavingSchemes(supabase: SupabaseClient) {
-    const { data, error } = await supabase
-        .from('saving_schemes')
-        .select('*')
-        .order('name', { ascending: true });
-
-    if (error) {
-        console.error('Error fetching saving schemes:', error);
-        return [];
-    }
-    return data;
-}
-
-async function getTransactions(supabase: SupabaseClient, memberId: string) {
-    const { data, error } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('member_id', memberId)
-        .order('date', { ascending: true });
-
-    if (error) {
-        console.error('Error fetching transactions:', error);
-        return [];
-    }
-    return data;
-}
+import { supabase } from "@/lib/supabase-client";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const getInitials = (name: string | undefined) => {
   if (!name) return "U";
@@ -190,26 +69,102 @@ function StatCard({ title, value, icon: Icon, description }: { title: string, va
     )
 }
 
-export default async function MemberProfilePage({ params }: { params: { id: string } }) {
-  const supabase = createSupabaseServerClient();
-  const member = await getMember(supabase, params.id);
+function MemberProfileSkeleton() {
+    return (
+        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+            <Card className="w-full">
+                <CardContent className="p-6 flex flex-col md:flex-row items-start gap-6">
+                    <Skeleton className="h-28 w-28 rounded-full shrink-0" />
+                    <div className="flex-grow space-y-4">
+                        <Skeleton className="h-8 w-1/2" />
+                        <Skeleton className="h-4 w-3/4" />
+                        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
+                            <Skeleton className="h-10 w-full" />
+                            <Skeleton className="h-10 w-full" />
+                            <Skeleton className="h-10 w-full" />
+                            <Skeleton className="h-10 w-full" />
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+            <div className="w-full">
+                <Skeleton className="h-10 w-full max-w-lg mb-2" />
+                <Skeleton className="h-96 w-full" />
+            </div>
+        </main>
+    );
+}
+
+export default function MemberProfilePage({ params }: { params: { id: string } }) {
+  const [member, setMember] = useState<any>(null);
+  const [shares, setShares] = useState<any[]>([]);
+  const [savings, setSavings] = useState<any[]>([]);
+  const [loans, setLoans] = useState<any[]>([]);
+  const [loanSchemes, setLoanSchemes] = useState<any[]>([]);
+  const [savingSchemes, setSavingSchemes] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [allRepayments, setAllRepayments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchMemberData = useCallback(async () => {
+    setLoading(true);
+    const { data: memberData, error: memberError } = await supabase
+      .from("members")
+      .select(`*`)
+      .eq("id", params.id)
+      .single();
+    
+    if (memberError || !memberData) {
+      console.error("Error fetching member:", memberError?.message);
+      setLoading(false);
+      return notFound();
+    }
+    setMember(memberData);
+
+    const [
+        sharesRes,
+        savingsRes,
+        loansRes,
+        loanSchemesRes,
+        savingSchemesRes,
+        transactionsRes
+    ] = await Promise.all([
+        supabase.from('shares').select('*').eq('member_id', params.id).order('purchase_date', { ascending: false }),
+        supabase.from('savings').select('*, saving_schemes (id, name, type, interest_rate)').eq('member_id', params.id).order('deposit_date', { ascending: false }),
+        supabase.from('loans').select('*, loan_schemes (name, repayment_frequency, grace_period_months), members (id, name)').eq('member_id', params.id).order('disbursement_date', { ascending: false }),
+        supabase.from('loan_schemes').select('*').order('name', { ascending: true }),
+        supabase.from('saving_schemes').select('*').order('name', { ascending: true }),
+        supabase.from('transactions').select('*').eq('member_id', params.id).order('date', { ascending: true })
+    ]);
+
+    setShares(sharesRes.data || []);
+    setSavings(savingsRes.data || []);
+    setLoans(loansRes.data || []);
+    setLoanSchemes(loanSchemesRes.data || []);
+    setSavingSchemes(savingSchemesRes.data || []);
+    setTransactions(transactionsRes.data || []);
+
+    if (loansRes.data && loansRes.data.length > 0) {
+        const loanIds = loansRes.data.map(l => l.id);
+        const { data: repaymentsData } = await supabase.from('loan_repayments').select('*').in('loan_id', loanIds);
+        setAllRepayments(repaymentsData || []);
+    }
+    
+    setLoading(false);
+  }, [params.id]);
+
+  useEffect(() => {
+    fetchMemberData();
+  }, [fetchMemberData]);
   
-  if (!member) {
-      notFound();
+  if (loading) {
+      return <MemberProfileSkeleton />;
   }
 
-  const [shares, savings, loans, loanSchemes, savingSchemes, transactions] = await Promise.all([
-    getShares(supabase, params.id),
-    getSavings(supabase, params.id),
-    getLoans(supabase, params.id),
-    getLoanSchemes(supabase),
-    getSavingSchemes(supabase),
-    getTransactions(supabase, params.id)
-  ]);
+  if (!member) {
+      return notFound();
+  }
 
-  const loanIds = loans.map(l => l.id);
-  const allRepayments = await getRepayments(supabase, loanIds);
-  
   const activeLoans = loans.filter(l => !['Paid Off', 'Rejected', 'Restructured'].includes(l.status));
   const activeLoanIds = activeLoans.map(l => l.id);
   const repaymentsForActiveLoans = allRepayments.filter(r => activeLoanIds.includes(r.loan_id));
@@ -259,20 +214,22 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
 
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-        <Card className="w-full">
-            <CardContent className="p-6 flex flex-col md:flex-row items-start gap-6">
-                <Avatar className="h-28 w-28 border-4 border-background shrink-0">
-                    {member.photo_url && <AvatarImage src={member.photo_url} alt={member.name || 'member photo'} />}
-                    <AvatarFallback className="text-4xl">{getInitials(member.name)}</AvatarFallback>
-                </Avatar>
-                <div className="flex-grow">
-                    <h1 className="text-3xl font-bold font-headline">{member.name}</h1>
+        <Card className="w-full overflow-hidden">
+             <CardContent className="p-0 flex flex-col md:flex-row items-start">
+                <div className="w-full md:w-48 h-32 md:h-auto bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                    <Avatar className="h-28 w-28 border-4 border-background">
+                        {member.photo_url && <AvatarImage src={member.photo_url} alt={member.name || 'member photo'} />}
+                        <AvatarFallback className="text-4xl bg-primary text-primary-foreground">{getInitials(member.name)}</AvatarFallback>
+                    </Avatar>
+                </div>
+                <div className="flex-grow p-6">
+                    <h1 className="text-3xl font-bold font-headline text-primary">{member.name}</h1>
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
                         <span>A/C: <span className="font-mono">{formatAccountNumber(member.account_number)}</span></span>
                         <span className="hidden sm:inline">|</span>
                         <span>Joined: {format(new Date(member.join_date), "do MMM, yyyy")}</span>
                     </div>
-                     <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
+                     <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-x-6 gap-y-4">
                         <ProfileInfoItem icon={AtSign} label="Email" value={member.email || 'N/A'} />
                         <ProfileInfoItem icon={Phone} label="Phone" value={member.phone || 'N/A'} />
                         <ProfileInfoItem icon={MapPin} label="Address" value={member.address || 'N/A'} />

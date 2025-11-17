@@ -80,25 +80,10 @@ const DropdownMenuItem = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Item> & {
     inset?: boolean
+    href?: string
   }
->(({ className, inset, ...props }, ref) => {
-  const { href } = props as { href?: string };
-  if (href) {
-    return (
-      <Link href={href} passHref legacyBehavior>
-        <DropdownMenuPrimitive.Item
-          ref={ref}
-          className={cn(
-            "relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
-            inset && "pl-8",
-            className
-          )}
-          {...props}
-        />
-      </Link>
-    )
-  }
-  return (
+>(({ className, inset, href, ...props }, ref) => {
+  const item = (
     <DropdownMenuPrimitive.Item
       ref={ref}
       className={cn(
@@ -109,6 +94,12 @@ const DropdownMenuItem = React.forwardRef<
       {...props}
     />
   )
+
+  if (href) {
+    return <Link href={href} passHref legacyBehavior>{item}</Link>
+  }
+
+  return item
 })
 DropdownMenuItem.displayName = DropdownMenuPrimitive.Item.displayName
 
