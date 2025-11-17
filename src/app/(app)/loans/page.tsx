@@ -81,7 +81,9 @@ export default async function LoansPage() {
           />
         </div>
       </div>
-      <LoansTable loans={loans} />
+      <LoansTable loans={loans} allLoanSchemes={loanSchemes} />
     </main>
   );
 }
+
+    

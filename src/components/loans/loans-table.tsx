@@ -15,6 +15,16 @@ import { Badge } from "../ui/badge";
 import { LoanDetailsDialog } from "./loan-details-dialog";
 import { RepaymentFrequency } from "@/lib/loan-utils";
 
+type LoanScheme = {
+  id: string;
+  name: string;
+  default_interest_rate: number;
+  max_term_months: number;
+  grace_period_months: number;
+  repayment_frequency: string;
+  is_active: boolean;
+};
+
 type Loan = {
   id: string;
   amount: number;
@@ -54,13 +64,15 @@ const getStatusBadgeVariant = (status: string) => {
             return 'outline';
         case 'Rejected':
             return 'destructive';
+        case 'Restructured':
+            return 'secondary';
         default:
             return 'secondary';
     }
 }
 
 
-export function LoansTable({ loans }: { loans: Loan[] }) {
+export function LoansTable({ loans, allLoanSchemes }: { loans: Loan[], allLoanSchemes: LoanScheme[] }) {
   return (
     <div className="rounded-lg border shadow-sm overflow-hidden">
       <Table>
@@ -106,7 +118,7 @@ export function LoansTable({ loans }: { loans: Loan[] }) {
                 </TableCell>
                  <TableCell className="text-right">{formatCurrency(loan.amount)}</TableCell>
                  <TableCell className="text-right">
-                    <LoanDetailsDialog loan={loan} />
+                    <LoanDetailsDialog loan={loan} allLoanSchemes={allLoanSchemes} />
                  </TableCell>
               </TableRow>
             ))
@@ -116,3 +128,5 @@ export function LoansTable({ loans }: { loans: Loan[] }) {
     </div>
   )
 }
+
+    

@@ -23,7 +23,19 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "../ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
+import { RestructureLoanDialog } from "./restructure-loan";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 
+
+type LoanScheme = {
+  id: string;
+  name: string;
+  default_interest_rate: number;
+  max_term_months: number;
+  grace_period_months: number;
+  repayment_frequency: string;
+  is_active: boolean;
+};
 
 type Loan = {
   id: string;
@@ -44,10 +56,11 @@ type Loan = {
 
 interface LoanDetailsDialogProps {
   loan: Loan;
+  allLoanSchemes: LoanScheme[];
   trigger?: React.ReactNode;
 }
 
-export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
+export function LoanDetailsDialog({ loan, allLoanSchemes, trigger }: LoanDetailsDialogProps) {
   const [open, setOpen] = React.useState(false);
   const [repayments, setRepayments] = React.useState<Repayment[]>([]);
   const [schedule, setSchedule] = React.useState<AmortizationEntry[]>([]);
@@ -129,7 +142,7 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
     }
   }, [open, fetchLoanData]);
   
-  const handleRepaymentAdded = () => {
+  const handleActionCompleted = () => {
       fetchLoanData();
       router.refresh();
   }
@@ -142,6 +155,8 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
   const totalPenaltyPaid = repayments.reduce((acc, p) => acc + p.penalty_paid, 0);
   
   const totalDueToday = schedule.filter(s => s.status === 'DUE' || s.status === 'OVERDUE' || s.status === 'PARTIALLY_PAID').reduce((acc, s) => acc + s.totalDue, 0);
+  const isLoanOverdue = totalDueToday > 0;
+  const isLoanActive = loan.status === 'Active';
 
   const getStatusBadge = (status: AmortizationEntry['status']) => {
     switch (status) {
@@ -170,6 +185,22 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
             <DropdownMenuItem onSelect={() => setOpen(true)}>View Details</DropdownMenuItem>
+             <RestructureLoanDialog 
+                originalLoan={loan}
+                outstandingPrincipal={outstandingBalance}
+                allLoanSchemes={allLoanSchemes}
+                onRestructureComplete={handleActionCompleted}
+                isLoanOverdue={isLoanOverdue}
+                isLoanActive={isLoanActive}
+                trigger={
+                  <DropdownMenuItem 
+                    onSelect={(e) => e.preventDefault()} 
+                    disabled={isLoanOverdue || !isLoanActive}
+                    >
+                      Restructure Loan
+                  </DropdownMenuItem>
+                }
+             />
         </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -216,7 +247,7 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
                     memberId={loan.members?.id || ''}
                     memberName={loan.members?.name || 'N/A'}
                     schedule={schedule}
-                    onRepaymentAdded={handleRepaymentAdded}
+                    onRepaymentAdded={handleActionCompleted}
                     triggerButton={
                         <Button><PlusCircle className="mr-2 h-4 w-4" /> Add Repayment</Button>
                     }
@@ -382,3 +413,5 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
     </Dialog>
   );
 }
+
+    

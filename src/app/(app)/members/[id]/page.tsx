@@ -462,7 +462,7 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
                                             <TableCell><Badge variant="outline">{loan.status}</Badge></TableCell>
                                             <TableCell className="text-right">{formatCurrency(loan.amount)}</TableCell>
                                             <TableCell className="text-right">
-                                                <LoanDetailsDialog loan={{...loan, members: {id: member.id, name: member.name!}}} />
+                                                <LoanDetailsDialog loan={{...loan, members: {id: member.id, name: member.name!}}} allLoanSchemes={loanSchemes} />
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -542,7 +542,5 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
     </main>
   );
 }
-
-    
 
     
