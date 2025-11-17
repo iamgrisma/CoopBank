@@ -5,7 +5,7 @@ import * as React from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CalendarIcon, Info } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 
 import { Button } from "@/components/ui/button";
@@ -36,7 +36,7 @@ import { cn } from "@/lib/utils";
 import { Textarea } from "../ui/textarea";
 import { AmortizationEntry, allocatePayment, formatCurrency } from "@/lib/loan-utils";
 import { Checkbox } from "../ui/checkbox";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
+import { TooltipProvider } from "../ui/tooltip";
 
 type Allocation = {
   principal: number;
@@ -377,3 +377,5 @@ export function AddRepaymentForm({ loanId, memberId, memberName, schedule, onRep
     </TooltipProvider>
   );
 }
+
+    

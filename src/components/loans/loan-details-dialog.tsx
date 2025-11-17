@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { generateDynamicAmortizationSchedule, formatCurrency, calculateTotalRepaid, Repayment, AmortizationEntry, generateIdealSchedule, IdealScheduleEntry, RepaymentFrequency } from "@/lib/loan-utils";
+import { generateDynamicAmortizationSchedule, formatCurrency, calculateTotalRepaid, Repayment, AmortizationEntry, generateIdealSchedule, RepaymentFrequency } from "@/lib/loan-utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { Button } from "../ui/button";
 import { MoreHorizontal, PlusCircle } from "lucide-react";
@@ -380,3 +380,5 @@ export function LoanDetailsDialog({ loan, trigger }: LoanDetailsDialogProps) {
     </Dialog>
   );
 }
+
+    

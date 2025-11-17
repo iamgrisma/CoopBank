@@ -175,12 +175,21 @@ export function AddLoanScheme({ triggerButton }: AddLoanSchemeProps) {
                       control={form.control}
                       name="grace_period_months"
                       render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Grace Period (Months)</FormLabel>
-                          <FormControl>
-                            <Input type="number" {...field} />
-                          </FormControl>
-                          <FormDescription>No payments required during this period.</FormDescription>
+                         <FormItem>
+                          <FormLabel>First Repayment Delay (Grace Period)</FormLabel>
+                            <Select onValueChange={(value) => field.onChange(parseInt(value, 10))} defaultValue={String(field.value)}>
+                                <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select grace period" />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => (
+                                        <SelectItem key={m} value={String(m)}>{m === 0 ? "No Delay" : `${m} Month${m > 1 ? 's' : ''}`}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                          <FormDescription>Interest accrues during this time.</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -232,7 +241,7 @@ export function AddLoanScheme({ triggerButton }: AddLoanSchemeProps) {
                             <SelectItem value="Quarterly">Quarterly</SelectItem>
                             <SelectItem value="Half-Yearly">Half-Yearly</SelectItem>
                             <SelectItem value="Yearly">Yearly</SelectItem>
-                            <SelectItem value="One-Time">One-Time (Bullet)</SelectItem>
+                            <SelectItem value="One-Time">One-Time (At Maturity)</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -276,7 +285,7 @@ export function AddLoanScheme({ triggerButton }: AddLoanSchemeProps) {
                       render={({ field }) => (
                         <FormItem className="flex flex-col">
                           <FormLabel>Offer Start Date (Optional)</FormLabel>
-                          <Popover>
+                           <Popover>
                             <PopoverTrigger asChild>
                               <FormControl>
                                 <Button variant="outline" className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
@@ -404,3 +413,5 @@ export function AddLoanScheme({ triggerButton }: AddLoanSchemeProps) {
     </Dialog>
   );
 }
+
+    
