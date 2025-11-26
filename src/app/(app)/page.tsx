@@ -8,7 +8,6 @@ import { UpcomingDues } from "@/components/dashboard/upcoming-dues";
 import { FinancialStatements } from "@/components/dashboard/financial-statements";
 import { supabase } from "@/lib/supabase-client";
 
-// This is now a server component, so we can fetch data directly.
 export default async function DashboardPage() {
   const [
     transactionsRes,
