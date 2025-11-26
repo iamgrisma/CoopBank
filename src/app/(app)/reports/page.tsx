@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
     Card,
     CardContent,
@@ -9,7 +9,6 @@ import {
   } from "@/components/ui/card"
 import { supabase } from "@/lib/supabase-client"
 import { formatCurrency } from "@/lib/utils";
-import { Skeleton } from '@/components/ui/skeleton';
 
 type FinancialSummary = {
     shareCapital: number;
@@ -19,68 +18,29 @@ type FinancialSummary = {
     penaltyIncome: number;
 };
 
-function ReportsPageSkeleton() {
-    return (
-        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-            <div className="flex items-center">
-                <h1 className="font-semibold text-lg md:text-2xl">Financial Reports</h1>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {[...Array(5)].map((_, i) => (
-                    <Card key={i}>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                           <Skeleton className="h-5 w-1/2" />
-                        </CardHeader>
-                        <CardContent>
-                            <Skeleton className="h-7 w-3/4 mb-2" />
-                            <Skeleton className="h-4 w-full" />
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
-        </main>
-    );
-}
-
-
-export default function ReportsPage() {
-    const [summary, setSummary] = useState<FinancialSummary>({ shareCapital: 0, totalSavings: 0, totalLoans: 0, interestIncome: 0, penaltyIncome: 0 });
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        async function getReportData() {
-            setLoading(true);
-            const [sharesRes, savingsRes, loansRes, transactionsRes] = await Promise.all([
-                supabase.from('shares').select('number_of_shares, face_value'),
-                supabase.from('savings').select('amount'),
-                supabase.from('loans').select('amount'),
-                supabase.from('transactions').select('type, amount')
-            ]);
-            
-            let summaryData: FinancialSummary = { shareCapital: 0, totalSavings: 0, totalLoans: 0, interestIncome: 0, penaltyIncome: 0 };
-            if (sharesRes.error || savingsRes.error || loansRes.error || transactionsRes.error) {
-                console.error({ sharesError: sharesRes.error, savingsError: savingsRes.error, loansError: loansRes.error, transactionsError: transactionsRes.error });
-            } else {
-                const shareCapital = (sharesRes.data || []).reduce((acc: number, s: any) => acc + (s.number_of_shares * s.face_value), 0);
-                const totalSavings = (savingsRes.data || []).reduce((acc: number, s: any) => acc + s.amount, 0);
-                const totalLoans = (loansRes.data || []).reduce((acc: number, l: any) => acc + l.amount, 0);
-                const interestIncome = (transactionsRes.data || [])
-                    .filter(t => t.type === 'Loan Interest')
-                    .reduce((acc, t) => acc + t.amount, 0);
-                const penaltyIncome = (transactionsRes.data || [])
-                    .filter(t => t.type === 'Penalty Income')
-                    .reduce((acc, t) => acc + t.amount, 0);
-                
-                summaryData = { shareCapital, totalSavings, totalLoans, interestIncome, penaltyIncome };
-            }
-            setSummary(summaryData);
-            setLoading(false);
-        }
-        getReportData();
-    }, []);
-
-    if (loading) {
-        return <ReportsPageSkeleton />;
+export default async function ReportsPage() {
+    const [sharesRes, savingsRes, loansRes, transactionsRes] = await Promise.all([
+        supabase.from('shares').select('number_of_shares, face_value'),
+        supabase.from('savings').select('amount'),
+        supabase.from('loans').select('amount'),
+        supabase.from('transactions').select('type, amount')
+    ]);
+    
+    let summary: FinancialSummary = { shareCapital: 0, totalSavings: 0, totalLoans: 0, interestIncome: 0, penaltyIncome: 0 };
+    if (sharesRes.error || savingsRes.error || loansRes.error || transactionsRes.error) {
+        console.error({ sharesError: sharesRes.error, savingsError: savingsRes.error, loansError: loansRes.error, transactionsError: transactionsRes.error });
+    } else {
+        const shareCapital = (sharesRes.data || []).reduce((acc: number, s: any) => acc + (s.number_of_shares * s.face_value), 0);
+        const totalSavings = (savingsRes.data || []).reduce((acc: number, s: any) => acc + s.amount, 0);
+        const totalLoans = (loansRes.data || []).reduce((acc: number, l: any) => acc + l.amount, 0);
+        const interestIncome = (transactionsRes.data || [])
+            .filter(t => t.type === 'Loan Interest')
+            .reduce((acc, t) => acc + t.amount, 0);
+        const penaltyIncome = (transactionsRes.data || [])
+            .filter(t => t.type === 'Penalty Income')
+            .reduce((acc, t) => acc + t.amount, 0);
+        
+        summary = { shareCapital, totalSavings, totalLoans, interestIncome, penaltyIncome };
     }
 
     return (

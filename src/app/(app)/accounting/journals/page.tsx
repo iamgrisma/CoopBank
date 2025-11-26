@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
     Card,
     CardContent,
@@ -18,82 +18,34 @@ import {
 import { supabase } from "@/lib/supabase-client"
 import { format } from "date-fns"
 import { formatCurrency } from "@/lib/utils";
-import { Skeleton } from '@/components/ui/skeleton';
 
-function JournalsPageSkeleton() {
-    return (
-        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-            <div className="flex items-center">
-                <h1 className="font-semibold text-lg md:text-2xl">Journal Entries</h1>
-            </div>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Recent Transactions</CardTitle>
-                    <CardDescription>
-                        A log of all debit and credit entries in the system.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                     <div className="rounded-lg border shadow-sm overflow-x-auto">
-                        <div className="p-4 space-y-4">
-                            {[...Array(5)].map((_, i) => (
-                                <div key={i}>
-                                    <Skeleton className="h-6 w-1/2 mb-4" />
-                                    <div className="space-y-2">
-                                        <Skeleton className="h-4 w-full" />
-                                        <Skeleton className="h-4 w-full" />
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-        </main>
-    );
-}
+export default async function JournalsPage() {
+    const { data, error } = await supabase
+        .from('journal_entries')
+        .select(`
+            id,
+            date,
+            description,
+            reference_id,
+            reference_type,
+            journal_entry_items (
+                id,
+                type,
+                amount,
+                chart_of_accounts (
+                    name,
+                    code
+                )
+            )
+        `)
+        .order('date', { ascending: false })
+        .limit(50);
 
-export default function JournalsPage() {
-    const [entries, setEntries] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        async function getJournalData() {
-            setLoading(true);
-            const { data, error } = await supabase
-                .from('journal_entries')
-                .select(`
-                    id,
-                    date,
-                    description,
-                    reference_id,
-                    reference_type,
-                    journal_entry_items (
-                        id,
-                        type,
-                        amount,
-                        chart_of_accounts (
-                            name,
-                            code
-                        )
-                    )
-                `)
-                .order('date', { ascending: false })
-                .limit(50);
-
-            if (error) {
-                console.error("Error fetching journal entries:", error);
-            } else {
-                setEntries(data || []);
-            }
-            setLoading(false);
-        }
-        getJournalData();
-    }, []);
-
-    if (loading) {
-        return <JournalsPageSkeleton />;
+    if (error) {
+        console.error("Error fetching journal entries:", error);
     }
+    
+    const entries = data || [];
 
     return (
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
