@@ -1,5 +1,4 @@
-'use client';
-import React from 'react';
+
 import { AddSaving } from "@/components/savings/add-saving";
 import { SavingsTable } from "@/components/savings/savings-table";
 import { Button } from "@/components/ui/button";

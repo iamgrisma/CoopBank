@@ -1,6 +1,4 @@
-'use client';
 
-import React from 'react';
 import { OverviewCards } from "@/components/dashboard/overview-cards";
 import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { CashFlowChart } from "@/components/dashboard/cash-flow-chart";

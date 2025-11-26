@@ -1,5 +1,4 @@
-'use client';
-import React from 'react';
+
 import { LoanSchemesTable } from "@/components/loans/loan-schemes-table";
 import { AddLoanScheme } from "@/components/loans/add-loan-scheme";
 import { Button } from "@/components/ui/button";

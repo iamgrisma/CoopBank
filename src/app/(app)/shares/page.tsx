@@ -1,5 +1,4 @@
-'use client';
-import React from 'react';
+
 import { AddShare } from "@/components/shares/add-share";
 import { SharesTable } from "@/components/shares/shares-table";
 import { Button } from "@/components/ui/button";

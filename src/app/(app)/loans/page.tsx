@@ -1,10 +1,8 @@
-'use client';
 
-import React from 'react';
 import { AddLoan } from "@/components/loans/add-loan";
 import { LoansTable } from "@/components/loans/loans-table";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, RefreshCcw } from "lucide-react";
+import { PlusCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
 import { SyncLoanStatuses } from "@/components/loans/sync-loan-statuses";
 

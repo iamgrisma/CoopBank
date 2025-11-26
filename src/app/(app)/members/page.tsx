@@ -1,10 +1,7 @@
-'use client';
-import React from 'react';
+
 import { MembersTable } from "@/components/members/members-table";
 import { AddMember } from "@/components/members/add-member";
 import { supabase } from "@/lib/supabase-client";
-import { PlusCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 export default async function MembersPage() {
   const { data, error } = await supabase
