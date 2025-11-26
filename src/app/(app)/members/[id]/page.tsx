@@ -9,44 +9,40 @@ export default async function MemberProfilePage({ params }: { params: { id: stri
         return notFound();
     }
     
-    const { data: memberData, error: memberError } = await supabase
-      .from("members")
-      .select(`*`)
-      .eq("id", id)
+    // Call the new RPC function to get all member data in one go
+    const { data: memberDetails, error: rpcError } = await supabase
+      .rpc('get_member_details', { member_id_param: id })
       .single();
-    
-    if (memberError || !memberData) {
-      console.error("Error fetching member:", memberError?.message);
+
+    if (rpcError || !memberDetails) {
+      console.error("Error fetching member details via RPC:", rpcError?.message);
       return notFound();
     }
 
-    const [
-        sharesRes,
-        savingsRes,
-        loansRes,
-        loanSchemesRes,
-        savingSchemesRes,
-        transactionsRes,
-        repaymentsRes,
-    ] = await Promise.all([
-        supabase.from('shares').select('*').eq('member_id', id).order('purchase_date', { ascending: false }),
-        supabase.from('savings').select('*, saving_schemes (id, name, type, interest_rate, lock_in_period_years)').eq('member_id', id).order('deposit_date', { ascending: false }),
-        supabase.from('loans').select('*, loan_schemes (name, repayment_frequency, grace_period_months), members (id, name)').eq('member_id', id).order('disbursement_date', { ascending: false }),
-        supabase.from('loan_schemes').select('*').order('name', { ascending: true }),
-        supabase.from('saving_schemes').select('*').order('name', { ascending: true }),
-        supabase.from('transactions').select('*').eq('member_id', id).order('date', { ascending: true }),
-        supabase.from('loan_repayments').select('*').in('loan_id', (await supabase.from('loans').select('id').eq('member_id', id)).data?.map(l => l.id) || []),
-    ]);
+    const {
+        member_data,
+        shares_data,
+        savings_data,
+        loans_data,
+        transactions_data,
+        repayments_data,
+        loan_schemes_data,
+        saving_schemes_data
+    } = memberDetails;
+    
+    if (!member_data) {
+        return notFound();
+    }
 
     const data = {
-        member: memberData,
-        shares: sharesRes.data || [],
-        savings: savingsRes.data || [],
-        loans: loansRes.data || [],
-        loanSchemes: loanSchemesRes.data || [],
-        savingSchemes: savingSchemesRes.data || [],
-        transactions: transactionsRes.data || [],
-        repayments: repaymentsRes.data || [],
+        member: member_data,
+        shares: shares_data || [],
+        savings: savings_data || [],
+        loans: loans_data || [],
+        loanSchemes: loan_schemes_data || [],
+        savingSchemes: saving_schemes_data || [],
+        transactions: transactions_data || [],
+        repayments: repayments_data || [],
     };
 
     return <MemberProfileClientPage {...data} />;
