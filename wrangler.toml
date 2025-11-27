@@ -2,17 +2,12 @@ name = "coop-bank-app"
 compatibility_date = "2024-05-20"
 
 [pages]
-# The "main" field is not used by Pages.
-# It is required by wrangler, but can be pointed to a non-existent file.
 main = "./dist/index.js"
+
+[assets]
+directory = "./dist"
 
 [build]
 command = "npm run build"
 watch_dir = "src"
 public_dir = "./.next"
-
-[dev]
-# For local development with wrangler, you may need to proxy to the Next.js dev server
-# proxy = "http://localhost:3000"
-# Or use the following command to run the Next.js dev server and wrangler dev concurrently
-# npm run dev & npx wrangler pages dev .next --port=8788
